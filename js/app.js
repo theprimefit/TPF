@@ -25,6 +25,8 @@
 
   const $ = (sel, el) => (el || document).querySelector(sel);
   const $$ = (sel, el) => Array.from((el || document).querySelectorAll(sel));
+  // Waits until typing pauses before re-rendering long lists, so search stays smooth.
+  const debounce = (fn, ms = 140) => { let t; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; };
   const form = $('#profile-form');
   const result = $('#result');
   const sheet = $('#print-sheet');
@@ -282,7 +284,10 @@
 
   // ── Router ───────────────────────────────────────────────────────
   const TITLES = { home: 'Dashboard' };
-  function show(name) {
+  const scrollPos = {};
+  let pushNav = false;
+  function show(name, restoreScroll) {
+    if (current) scrollPos[current] = window.scrollY;
     if (!SCREENS.includes(name)) name = 'home';
     if (name === 'chart' && !plan) name = 'home';
     if (name === 'patient' && !viewPatient) name = 'patients';
@@ -324,14 +329,15 @@
     if (name === 'recipes') renderRecipes();
     if (name === 'recipe') renderRecipe();
     if (name === 'settings') renderSettings();
-    window.scrollTo(0, 0);
+    window.scrollTo(0, restoreScroll ? scrollPos[name] || 0 : 0);
   }
 
   function go(name) {
     if (location.hash.slice(1) === name) show(name);
-    else location.hash = name;
+    else { pushNav = true; location.hash = name; }
   }
-  window.addEventListener('hashchange', () => show(location.hash.slice(1)));
+  // Back / forward returns to where the list was scrolled; new screens start at the top.
+  window.addEventListener('hashchange', () => { const back = !pushNav; pushNav = false; show(location.hash.slice(1), back); });
 
   $('#back').addEventListener('click', () => (history.length > 1 ? history.back() : go('home')));
   $('#go-library').addEventListener('click', () => go('library'));
@@ -364,12 +370,22 @@
   ];
   $('#drawer-nav').innerHTML = NAV.map(([k, icon, label]) => `<button type="button" data-go="${k}" data-nav="${k}"><span class="nav-ico">${icon}</span>${esc(label)}</button>`).join('');
   const TABS = [['home', '🏠', 'Home'], ['patients', '👥', 'Patients'], ['s1', '➕', 'New'], ['charts', '📋', 'Charts'], ['recipes', '🍲', 'Recipes']];
+  $('#tab-bar').innerHTML = TABS.map(([k, icon, label]) => `<button type="button" class="tab${k === 's1' ? ' tab-new' : ''}" data-go="${k}" data-nav="${k}"><span>${icon}</span><small>${label}</small></button>`).join('');
   function renderTabs() {
-    $('#tab-bar').innerHTML = TABS.map(([k, icon, label]) => `<button type="button" class="tab${k === 's1' ? ' tab-new' : ''}" data-go="${k}" aria-current="${k === current}"><span>${icon}</span><small>${label}</small></button>`).join('');
-    $$('#drawer-nav button').forEach((b) => b.setAttribute('aria-current', String(b.dataset.nav === current)));
+    $$('#tab-bar button, #drawer-nav button').forEach((b) => b.setAttribute('aria-current', String(b.dataset.nav === current)));
   }
-  function openDrawer() { $('#drawer').hidden = false; $('#scrim').hidden = false; requestAnimationFrame(() => document.body.classList.add('drawer-open')); }
-  function closeDrawer() { document.body.classList.remove('drawer-open'); $('#drawer').hidden = true; $('#scrim').hidden = true; }
+  let drawerTimer;
+  function openDrawer() {
+    clearTimeout(drawerTimer);
+    $('#drawer').hidden = false; $('#scrim').hidden = false;
+    $('#drawer').getBoundingClientRect(); // start the slide from the closed position
+    document.body.classList.add('drawer-open');
+  }
+  function closeDrawer() {
+    if (!document.body.classList.contains('drawer-open')) return;
+    document.body.classList.remove('drawer-open');
+    drawerTimer = setTimeout(() => { $('#drawer').hidden = true; $('#scrim').hidden = true; }, 240);
+  }
   $('#menu').addEventListener('click', openDrawer);
   $('#scrim').addEventListener('click', closeDrawer);
 
@@ -499,7 +515,7 @@
         ${ICON.chev}
       </button>`).join('') : `<div class="empty">${q ? 'No patient matches your search.' : 'No patients yet. Patients are saved automatically when you create a chart with a patient name.'}</div>`;
   }
-  $('#pt-search').addEventListener('input', renderPatients);
+  $('#pt-search').addEventListener('input', debounce(renderPatients));
   $('#pt-list').addEventListener('click', (e) => {
     const b = e.target.closest('[data-patient]');
     if (b) { viewPatient = b.dataset.patient; go('patient'); }
@@ -548,7 +564,7 @@
     const list = store.listCharts().filter((c) => !q || [c.name || 'generic', P.PLANS[c.plan] ? P.PLANS[c.plan].label : ''].join(' ').toLowerCase().includes(q));
     $('#ch-list').innerHTML = list.length ? list.map((c) => chartRow(c)).join('') : `<div class="empty">${q ? 'No chart matches your search.' : 'No saved charts yet.'}</div>`;
   }
-  $('#ch-search').addEventListener('input', renderCharts);
+  $('#ch-search').addEventListener('input', debounce(renderCharts));
 
   // ── Chart helpers (chart language) ──────────────────────────────
   const L = () => (profile && profile.chartLang) || 'en';
@@ -918,7 +934,7 @@
       render();
     }
   });
-  $('#editor-q').addEventListener('input', renderEditorResults);
+  $('#editor-q').addEventListener('input', debounce(renderEditorResults));
   $('#editor-category').addEventListener('change', renderEditorResults);
   $('#editor-sort').addEventListener('change', renderEditorResults);
   editor.addEventListener('cancel', () => { edit = null; });
@@ -943,7 +959,7 @@
         <div class="fc-badges">${f.flags.includes('wl') ? '<i class="badge wl">Weight loss</i>' : ''}${P.isHighProtein(f) ? '<i class="badge hp">High protein</i>' : ''}${f.flags.includes('tr') ? '<i class="badge tr">Travel</i>' : ''}${f.flags.includes('hgi') ? '<i class="badge warn">High GI</i>' : ''}${f.recipe ? `<button type="button" class="badge rcp" data-open-recipe="${esc(f.name)}">📖 Recipe</button>` : ''}</div>
       </div>`).join('');
   }
-  $('#lib-search').addEventListener('input', renderLibrary);
+  $('#lib-search').addEventListener('input', debounce(renderLibrary));
   ['#lib-category', '#lib-region', '#lib-diet', '#lib-kcal', '#lib-sort'].forEach((s) => $(s).addEventListener('change', renderLibrary));
   $('#lib-filters').addEventListener('click', (e) => {
     const c = e.target.closest('.chip');
@@ -981,7 +997,7 @@
           <span class="rcard-meta"><i class="diet-dot ${f.diet}"></i>${f.kcal} kcal · P ${f.p} g · ${f.recipe.ing.length} ingredients</span></span>
       </button>`).join('');
   }
-  $('#rc-search').addEventListener('input', renderRecipes);
+  $('#rc-search').addEventListener('input', debounce(renderRecipes));
   ['#rc-category', '#rc-diet'].forEach((s) => $(s).addEventListener('change', renderRecipes));
 
   function recipeBody(f, serves) {
