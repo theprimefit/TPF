@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hindivine Admin: same WebView wrapper as Hindivine Diet, separate package so both install side by side. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.hindivine.admin">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <application
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:allowBackup="true"
+        android:hardwareAccelerated="true"
+        android:theme="@style/AppTheme">
+        <activity
+            android:name="com.hindivine.diet.MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <receiver android:name="com.hindivine.diet.ReminderReceiver" android:exported="false" />
+        <!-- PDFs shared to WhatsApp: read access only through the share intent's grant. -->
+        <provider
+            android:name="com.hindivine.diet.ShareProvider"
+            android:authorities="com.hindivine.admin.files"
+            android:exported="false"
+            android:grantUriPermissions="true" />
+    </application>
+</manifest>

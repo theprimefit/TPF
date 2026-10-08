@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Builds dist/DietChart.apk from the web app without the Android SDK or Gradle.
+# Builds dist/HindivineDiet.apk (or, with APP=admin, dist/HindivineAdmin.apk) from the web app
+# without the Android SDK or Gradle.
 # Needs: Java 11+, curl, zip/unzip, python3. Build tools are fetched from Maven Central.
 set -euo pipefail
 
@@ -7,7 +8,15 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 AND="$ROOT/android"
 TOOLS="${TOOLS_DIR:-$AND/.tools}"
 BUILD="$AND/build"
-OUT="$ROOT/dist/HindivineDiet.apk"
+APP="${APP:-diet}"
+if [ "$APP" = admin ]; then
+  OUT="${OUT:-$ROOT/dist/HindivineAdmin.apk}"
+  MANIFEST="$AND/admin/AndroidManifest.xml"
+  BUILD="$AND/build-admin"
+else
+  OUT="$ROOT/dist/HindivineDiet.apk"
+  MANIFEST="$AND/AndroidManifest.xml"
+fi
 KEYSTORE="${KEYSTORE:-$AND/release.p12}"
 STOREPASS="${STOREPASS:-dietchart}"
 ALIAS="${KEY_ALIAS:-dietchart}"
@@ -15,7 +24,7 @@ ALIAS="${KEY_ALIAS:-dietchart}"
 VERSION_CODE="${VERSION_CODE:-1}"
 VERSION_NAME="${VERSION_NAME:-1.0}"
 MIN_SDK=24  # v2 signing only (apksig 2.3.0 cannot produce v1 signatures on modern JDKs)
-TARGET_SDK=30
+TARGET_SDK=35  # Android 15: Play Protect warns about apps built for older Android versions
 
 M=https://repo1.maven.org/maven2
 fetch() { # url dest
@@ -42,19 +51,39 @@ rm -rf "$BUILD"
 mkdir -p "$BUILD"/{res,gen,classes,assets/www,dex} "$(dirname "$OUT")"
 
 echo "• Copying web app into assets"
-cp "$ROOT/index.html" "$BUILD/assets/www/"
-cp -r "$ROOT/css" "$ROOT/js" "$ROOT/img" "$ROOT/vendor" "$BUILD/assets/www/"
+if [ "$APP" = admin ]; then
+  # The admin app lives in www/admin and uses the shared logo and icons in www/img.
+  mkdir -p "$BUILD/assets/www/admin"
+  cp "$ROOT/admin/index.html" "$ROOT/admin/manifest.webmanifest" "$BUILD/assets/www/admin/"
+  cp -r "$ROOT/admin/css" "$ROOT/admin/js" "$ROOT/admin/vendor" "$ROOT/admin/google-apps-script" "$BUILD/assets/www/admin/"
+  cp -r "$ROOT/img" "$BUILD/assets/www/"
+  # Clinic build only: SHEET_ENV=android/sheet.env (git-ignored file with HDV_SHEET_URL and HDV_SHEET_SECRET)
+  # puts the Google Sheet link inside the APK so it connects by itself. Never commit such an APK to a public repo.
+  if [ -n "${SHEET_ENV:-}" ]; then . "$SHEET_ENV"; fi
+  if [ -n "${HDV_SHEET_URL:-}" ]; then
+    echo "  (built-in Google Sheet connection included)"
+    node -e 'const [u, k] = process.argv.slice(1); process.stdout.write(`window.HDV_CONFIG = ${JSON.stringify({ sheetsUrl: u, sheetsSecret: k, sheetName: "Hindivine" })};\n`);' "$HDV_SHEET_URL" "${HDV_SHEET_SECRET:-}" > "$BUILD/assets/www/admin/js/config.js"
+  fi
+else
+  cp "$ROOT/index.html" "$BUILD/assets/www/"
+  cp -r "$ROOT/css" "$ROOT/js" "$ROOT/img" "$ROOT/vendor" "$BUILD/assets/www/"
+fi
 
 echo "• Compiling resources"
 "$AAPT2" compile --dir "$AND/res" -o "$BUILD/res/res.zip"
+OVERLAY=()
+if [ "$APP" = admin ]; then
+  "$AAPT2" compile --dir "$AND/admin/res" -o "$BUILD/res/admin.zip"
+  OVERLAY=(-R "$BUILD/res/admin.zip")
+fi
 "$AAPT2" link -o "$BUILD/unsigned.apk" \
   -I "$FRAMEWORK" \
-  --manifest "$AND/AndroidManifest.xml" \
+  --manifest "$MANIFEST" \
   --min-sdk-version "$MIN_SDK" --target-sdk-version "$TARGET_SDK" \
   --version-code "$VERSION_CODE" --version-name "$VERSION_NAME" \
   -A "$BUILD/assets" \
   --java "$BUILD/gen" \
-  "$BUILD/res/res.zip"
+  "$BUILD/res/res.zip" "${OVERLAY[@]}"
 
 echo "• Compiling Java"
 find "$AND/src" "$BUILD/gen" -name '*.java' > "$BUILD/sources.txt"

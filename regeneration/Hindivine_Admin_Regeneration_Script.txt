@@ -1,0 +1,702 @@
+================================================================================
+ HINDIVINE ADMIN — FULL REGENERATION SCRIPT (version 4.0)
+ Developer credit: Aamir Sk · Hindivine Digital Marketing Team
+ Hindivine Healthcare Pvt. Ltd. · www.hindivine.com
+================================================================================
+
+HOW TO USE THIS FILE
+--------------------
+This file describes the whole Hindivine Admin app so that it can be rebuilt
+from scratch by a developer or by an AI coding assistant. It has three parts:
+
+  PART A  A ready-to-paste prompt (short version) for an AI coding assistant.
+  PART B  The detailed specification: architecture, data model, every business
+          rule, every screen, exports, Google Sheet storage, Android build.
+  PART C  Step-by-step rebuild and release checklist.
+
+The exact source code of version 4.0 is in the companion file
+"Hindivine_Admin_Full_Source.txt" (every file, with an unpack script). If you
+want an identical app, use that file. If you want to regenerate or extend the
+app, use this file.
+
+
+################################################################################
+ PART A — PROMPT FOR AN AI CODING ASSISTANT
+################################################################################
+
+Copy everything between the lines into the assistant, then attach PART B.
+
+--------------------------------------------------------------------------------
+Build "Hindivine Admin", an offline-first clinic management web app for
+Hindivine Healthcare (weight-loss injections, protein, diet support and OPD
+consultations), packaged as an Android APK. Use plain HTML, CSS and vanilla
+JavaScript only (no framework, no build step), so the same files run in a
+browser, as an installable PWA and inside an Android WebView.
+
+Files:
+  admin/index.html              app shell (login screen, sidebar, header,
+                                main view, bottom tab bar, one <dialog>, toast)
+  admin/css/admin.css           complete design system (light + dark)
+  admin/js/core.js              ALL data and business rules, no DOM access,
+                                must run in Node for unit tests
+  admin/js/export.js            A4 PDF (jsPDF + AutoTable), Excel (SheetJS)
+                                and A4 JPEG (canvas) export
+  admin/js/app.js               every screen, form, filter and action
+  admin/vendor/                 jspdf.umd.min.js 2.5.2,
+                                jspdf.plugin.autotable.min.js 3.8.4,
+                                xlsx.mini.min.js 0.18.5 (bundled, offline)
+  admin/google-apps-script/Code.gs  Google Sheet data store (Apps Script)
+  admin/sw.js, admin/manifest.webmanifest   PWA
+  android/…                     WebView wrapper + SDK-less build script
+  tests/admin.test.js           node:test unit tests for core.js
+
+Follow PART B exactly for data model, rules, roles, screens and exports.
+All money in Indian Rupees (₹, en-IN grouping). Dates stored as YYYY-MM-DD.
+Every change must be written to an activity log with the signed-in person's
+name. Show "Developed by Aamir Sk · Hindivine Digital Marketing Team" on the
+login screen, in the side menu, in Settings and on the What's new page.
+--------------------------------------------------------------------------------
+
+
+################################################################################
+ PART B — DETAILED SPECIFICATION
+################################################################################
+
+B1. ARCHITECTURE
+----------------
+* One JSON document holds all data ("state"). It is kept in localStorage under
+  the key  hindivine.admin.v1  and mirrored to a Google Sheet (see B9).
+* core.js exports window.ADMIN (and module.exports in Node):
+    createAdmin(storage, clock?)  → the admin API (all functions in B3–B8)
+    memoryStorage(), defaultState(), splitIncentive(), matchItem(),
+    rangeFor(name, today), monthRange('YYYY-MM'), isoDate(date), daysBetween()
+    constants: KINDS, SALE_TYPES, EXPENSE_CATEGORIES, SHEETS, KEY, ROLES,
+    APPT_MODES, APPT_STATUS, PAY_METHODS, DEFAULT_PERMS, LEAD_PRIORITIES,
+    DEFAULT_LISTS
+* Every mutating function: validates (throws Error with a plain message),
+  changes state, calls log(action, detail), then save(). save() writes
+  localStorage and calls every onChange(listener) with source 'local'
+  (or 'remote' when data was loaded from the sheet).
+* app.js renders screens as HTML strings into <main id="view">, uses event
+  delegation (data-go="screen", data-act="action", data-filter="…"),
+  one modal <dialog> for all forms, and toast() for messages.
+* export.js exports window.EXPORT = { pdf, xlsx, jpeg, pdfText }.
+
+B2. STATE (DATA MODEL)
+----------------------
+state = {
+  version: 1,
+  settings: {
+    clinic: 'Hindivine Healthcare',
+    incentive: { injection: 1000, protein: 500 },        // clinic defaults
+    dietPlans: [ {id:'d1', name:'1 Month', months:1, price:0, incentive:1000, disabled:false},
+                 {id:'d3', name:'3 Month', months:3, price:0, incentive:2000, disabled:false} ],
+    renewalDays: [75, 90],      // alert after 75 days, overdue from 90
+    consultFee: 1000,           // OPD consultation fee
+    activeDays: 90,             // "active patient" window
+    purchaseExpense: true,      // purchases also book an expense
+    stockAlerts: true,          // global low-stock alerts switch
+    kitOn: true,                // injection kit auto-deduct switch
+    kit: [ {itemId, qty} ],     // per injection pen (see B5)
+    lists: { expenseCategories, services, leadSources, leadStatuses,
+             payMethods, designations },               // editable choice lists
+    perms: { admin:{screens:[…], del:true}, manager:{…, del:false},
+             desk:{screens:['appointments','leads'], del:false} },
+    // device-only (never sent to the sheet): sheetsUrl, sheetsSecret,
+    // autoSync, lastSync
+  },
+  categories: [ {name, kind:'injection'|'protein'|'other'} ],
+  items: [ {id, kind, category, brand, name, unit, price, incentive|null,
+            opening, lowAt, orderAt|null, alertOff, disabled} ],
+  moves: [ {id, itemId, qty(+/-), type:'purchase'|'sale'|'kit'|'adjust',
+            ref, date} ],                               // stock ledger
+  team: [ {id, name, designation, mobile, salary, incentiveOn, joiningDate,
+           incInjection|null, incProtein|null, payMode:'both'|'salary'|'incentive',
+           disabled, created} ],
+  patients: [ {id, name, mobile, created, age?, gender?, city?, notes?} ],
+  sales: [ {id, type:'injection'|'protein'|'diet', date, patientId, patientName,
+            mobile, patientType:'new'|'renewal', itemId, planId, product, qty,
+            amount, refId, sharedId, sharePct, dietitianId, notes,
+            incentive, splits:[{memberId, name, pct, amount}], created} ],
+  purchases: [ {id, vendor, invoiceNo, date, lines:[{itemId, name, qty, batch,
+                expiry, rate, gst, total}], total} ],
+  expenses: [ {id, date, category, amount, note, ref?, auto?} ],
+  appointments: [ {id, date, time, patientId, patientName, mobile,
+                   mode:'clinic'|'online', service, fee, paid, payMethod,
+                   status:'booked'|'completed'|'cancelled'|'noshow', link,
+                   notes, by, leadId, created} ],
+  leads: [ {id, date, created, createdBy, name, mobile, altMobile, age, gender,
+            city, email, source, interest, priority:'hot'|'warm'|'cold',
+            status, assignedTo(account id), followUp, followTime, weight,
+            targetWeight, height, budget, notes, lastContact, patientId,
+            apptId, history:[{at, by, type:'created'|'call'|'whatsapp'|'note'|
+            'visit'|'status'|'followup', text}]} ],
+  renewalsDone: { 'saleId:stage': 'YYYY-MM-DD' },
+  log: [ {at(ms), by, action, detail} ],               // capped at 3000
+  accounts: [ {id, name, role:'super'|'admin'|'manager'|'desk', hash, salt,
+               len, pin (plain, staff only), memberId, disabled} ]
+}
+
+Default items: Injection category — Mounjaro 2.5mg, 5mg, 10mg, 15mg;
+Wegovy 0.25mg, 1mg, 2.4mg; Ozempic 0.25mg, 1mg (unit pen, lowAt 2).
+Protein — Protein Sachets (unit sachet, lowAt 20).
+Other — Needles, Alcohol Swabs, Insulin Syringes, Ice Gel Packs, Travel Bags.
+orderAt defaults to 2 for every protein item and for Mounjaro 10mg / 15mg.
+Default accounts: super 'Super Admin', admin 'Admin', manager 'Manager',
+desk 'Front Desk' (no PIN until set).
+Default lists:
+  expenseCategories: Salary, Incentive, Rent, Electricity, Courier, Marketing,
+    Protein Purchase, Injection Purchase, Miscellaneous (first-named built-ins
+    Salary, Incentive, Protein Purchase, Injection Purchase, Miscellaneous
+    cannot be removed)
+  services: Weight loss consultation, Mounjaro injection, Wegovy injection,
+    Ozempic injection, Diet plan, Follow-up visit, Body composition analysis
+  leadSources: Instagram, Facebook, Google, Website, WhatsApp, Walk-in,
+    Referral, Phone call, Other
+  leadStatuses: New, Contacted, Interested, Follow-up, Appointment booked,
+    Converted, Not interested, Lost   (New and Converted cannot be removed)
+  payMethods: Cash, UPI, Card, Bank transfer
+  designations: Doctor, Dietitian, Counsellor, Front Desk, Manager, Nurse,
+    Pharmacist
+Migration on load: old "users" object → accounts; old single PIN → Super
+Admin; renewalDays [60,90] → [75,90]; remove apiKey/aiModel/autoSaveScan.
+
+B3. STOCK RULES
+---------------
+* stockOf(item) = item.opening + sum of its moves.
+* Purchase line → move +qty (type purchase). Sale → move −qty (type sale).
+* Injection kit: for every injection sale, for each kit entry add a move
+  −(kit.qty × pens) of type 'kit'. Defaults per pen: Travel Bags 1,
+  Ice Gel Packs 1, Alcohol Swabs 16, Needles 2. Editable (setKit) and can be
+  switched off (settings.kitOn). Deleting or editing a sale removes its moves.
+* A sale is refused if the product stock is lower than the quantity; kit items
+  may go negative (never block a sale).
+* Low stock: stock ≤ lowAt, unless settings.stockAlerts is false or the item
+  has alertOff.
+* Order required: item.orderAt != null and stock < orderAt.
+* stockReport(range): per item opening (at range start), purchased, sold,
+  used (kit), adjusted, current.
+
+B4. SALES & INCENTIVES
+----------------------
+* Sale types: injection (per pen), protein (once per sale), diet support
+  (plan: 1 Month ₹1000 / 3 Month ₹2000 incentive).
+* References: refId (100%) plus optional sharedId with sharePct
+  (blank = 50 → 50-50; any custom %).
+* Rate for a person: member's own rate (incInjection / incProtein) if set,
+  else the product's incentive override, else the clinic default
+  (₹1000 injection, ₹500 protein). Diet uses the plan incentive.
+* If all references have the same rate: split total exactly with remainder to
+  the first (splitIncentive). Otherwise each gets round(rate × units × pct/100).
+* Incentive status Off → that person's share is ₹0.
+* patientType auto: 'renewal' if the patient bought before, else 'new'.
+* Revenue = sales amounts + paid OPD fees (not cancelled).
+
+B5. SALARY
+----------
+salarySheet('YYYY-MM') per member: mode = payMode.
+  salary counted unless mode 'incentive' (and member joined by month end);
+  incentive counted unless mode 'salary'; total = salary + incentive.
+postSalary(month) books Salary and Incentive expenses (replacing an earlier
+booking of the same month).
+
+B6. OPD APPOINTMENTS
+--------------------
+saveAppointment: date, time, patient (find or create by mobile/name), mode
+clinic|online, optional service (added to the services list), fee (default
+settings.consultFee), link for online, paid + payMethod, status, notes, by,
+leadId. updateAppointment(patch) for status / paid. appointmentStats(range):
+total, booked, completed, cancelled, noshow, clinic, online, fees (paid, not
+cancelled), unpaid.
+
+B7. LEADS (CRM)
+---------------
+saveLead requires name and mobile; refuse a second lead with the same mobile.
+New lead: status New, history 'created'. addLeadActivity(id, {type, text,
+followUp, followTime}) adds history; a call/WhatsApp on a New lead moves it to
+Contacted. setLeadStatus records 'from → to'. convertLead(id, appointment?)
+creates/finds the patient; with an appointment books it (service = lead
+interest), status 'Appointment booked'; without, status 'Converted'.
+leadStats(range, filter): total, open, won, conversion %, dueToday, overdue,
+hot, newToday. Closed = Converted, Not interested, Lost.
+Front Desk sees leads assigned to them, unassigned ones and ones they created.
+
+B8. LOGINS, ROLES, ACTIVITY LOG
+-------------------------------
+* PIN 4–6 digits; stored as SHA-256(salt + ':' + pin) hex with a random salt
+  and the PIN length (len) so the keypad checks as soon as enough digits are
+  typed. Staff PINs are also stored in plain text (field pin) so the Super
+  Admin can view/reset them; the Super Admin PIN is never stored in plain text.
+* At least one Super Admin must always exist (cannot delete/demote the last).
+* Roles: Super Admin = everything. Admin / Manager / Front Desk = screens in
+  settings.perms (editable matrix in Settings) + "can delete" flag.
+  Default Admin: all except Settings, can delete. Default Manager: dashboard,
+  today, appointments, leads, sell, sales, patients, renewals, products,
+  inventory, purchases, expenses, reports, activity. Default Front Desk:
+  appointments, leads.
+* setActor(name) after sign-in; every log() entry stores who did it.
+* Logout after 15 minutes idle.
+
+B9. GOOGLE SHEET DATA STORE (Code.gs)
+-------------------------------------
+Sheet ID: 1_aKPoHJaJfQ6awuoG7ihufQzOBhw8I84yipErlWO1_Y
+* setup(): creates the 15 tabs + hidden "_AppData", logs a secret.
+* doGet?action=load&secret= → {ok, updated, by, state}.
+* doPost {action:'save', secret, state, sheets, base, by, force} → refuses
+  with {conflict:true} when another device saved after `base`; otherwise
+  writes the JSON state in 40,000-character chunks to _AppData (A1 holds
+  {updated, chunks, by}) and rewrites the readable tabs.
+* Tabs: Dashboard, Appointments, Leads, Patients, Injection Sales, Protein
+  Sales, Diet Support, Purchases, Inventory, Team, Incentives, Salary,
+  Expenses, Renewals, Activity Log (rows built by core.sheetsData()).
+* App side: load on sign-in, every 30 s, on returning to the app, on
+  pull-down and the refresh button; save 1.5 s after each change; silent
+  (only the refresh icon spins); offline changes retried every 60 s; if both
+  sides changed, ask "Keep this device's data" or "Use Google Sheet data".
+  "Unsaved" = hash of exportState() differs from the last saved/loaded hash.
+  exportState() removes device-only settings.
+
+B10. SCREENS (app.js)
+---------------------
+Bottom menu (phones): Dashboard · Today · Sale (centre button) · OPD ·
+Inventory (only those the login may open; Front Desk: OPD · Leads).
+Side menu groups: Overview, Patients & OPD, Sales, Stock, Team & money,
+Reports, Admin.
+
+ 1. Login — logo, one tile per account with a PIN (name + role, coloured by
+    role), PIN dots + keypad, first-time "Create Super Admin" and
+    "Connect Google Sheet" (URL + secret) screens, credit line.
+ 2. Dashboard — period bar; hero (today's OPD, revenue, net profit, renewals
+    due); red pulsing "Order required" banner; cards: Sales summary,
+    OPD appointments, Patient summary, Leads, Team summary (if allowed),
+    Stock summary (available stock chips FIRST, then KPIs, order-required and
+    low-stock alerts), Revenue vs expenses by month bars; PDF/Excel.
+ 3. Today Summary — date with ‹ › and Today; hero (sales, purchases, OPD,
+    expenses + new leads); Order required card; Sales; Purchases; Stock
+    available; Stock not available; export PDF or A4 JPEG.
+ 4. OPD Appointments — Day view (17-day date strip with counts) or All
+    appointments (period); KPIs; filters (search, status, mode, service,
+    paid/unpaid); appointment cards (time, name, service, mode/status/payment
+    badges, fee); detail sheet: Completed, Mark paid (amount + method),
+    No-show, Cancel/Restore, WhatsApp confirmation, Edit, Delete (if allowed);
+    form: patient (datalist), mobile, date, time, service (+ Add new),
+    mode cards (Clinic visit / Online), fee, meeting link, paid + method,
+    notes.
+ 5. Leads (CRM) — tabs Open / Due today / Overdue / Converted / Lost / All;
+    KPIs (open, new today, due today, overdue, hot, conversion); pipeline
+    chips by stage (click to filter); filters (search, source, priority,
+    assigned); lead cards (priority dot, name, stage, interest, source, city,
+    assignee, follow-up badge coloured overdue/today/upcoming, Call,
+    WhatsApp, Update); detail: Call, WhatsApp, Book appointment, Mark
+    converted, Edit, Delete; stage chips; update box (type, next follow-up,
+    time, what happened); details incl. BMI; history timeline.
+ 6. Patients — search, active/inactive filter, visits, total spent, last
+    visit; detail with sales + appointments; Book appointment, New sale,
+    Edit, Delete (with their sales and appointments, stock returned).
+ 7. Renewals — Due / 75-day / 90+ days / Next 10 days / Contacted / All;
+    Call, WhatsApp, Contacted toggle, Renew (prefilled sale).
+ 8. New Sale — Injection / Protein / Diet support; patient, mobile,
+    new/renewal (auto), product (with stock), qty, amount (auto from price),
+    date, reference, shared reference + %, dietitian, notes; live summary:
+    stock before→after, incentive split per person, kit out, revenue.
+ 9. Sales — period, filters (search, type, new/renewal, team member), KPIs,
+    list with edit/delete.
+10. Products — injections, protein (price, incentive override, stock,
+    enable/disable), diet plans.
+11. Inventory — period, filters (category, low/ok/disabled), table per
+    category: available FIRST, opening, purchased, sold, kit used, adjusted,
+    status (Order required / Alert off / Low / OK), ± Stock, 🔔 alert toggle,
+    Edit (name, category + Add new, unit, opening, low-at, order-required
+    limit, alert off); Injection kit editor; categories.
+12. Purchases — manual invoices (vendor, invoice no., date, lines: product,
+    batch, qty, expiry, rate, GST %, total); search; KPIs.
+13. Team — name, designation (+ Add new), mobile, salary, joining date,
+    incentive per injection / per protein (blank = default), pay counts,
+    incentive on/off, personal login (+ Login), enable/disable, delete.
+14. Incentives — clinic defaults and diet plan incentives; ledger by period
+    and member with totals per person.
+15. Salary — month picker; employee, pay counts, salary, incentive, total;
+    Book as expenses.
+16. Expenses — period, category (editable list), KPIs, list, add/edit/delete.
+17. Reports — tabs Overview, Today, OPD, Leads, Sales, Team, Financial,
+    Stock, Purchases, Expenses, Renewals, Activity; per-tab filters; PDF /
+    Excel per tab; "Download all" PDF / Excel.
+18. Activity Log — period, person, search; per-person summary (changes,
+    leads added, lead updates, appointments, sales); timeline.
+19. Settings — Clinic (name, OPD fee, default incentives, renewal days,
+    active days, purchase expense, stock alerts, kit switch + edit kit);
+    Google Sheet (URL, secret, status); Logins (Super Admin only: add, edit,
+    PIN set/change, random 6-digit PIN, delete, staff PIN visible);
+    Roles & permissions matrix (Super Admin only); Choice lists (chips with
+    rename/remove + add) incl. inventory categories; Backup (export/import
+    JSON), All reports, Erase all data (Super Admin).
+20. What's new — version history (1.0, 1.1, 2.0, 3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 4.0, 4.1, 4.2, 4.3, 4.4) and credits.
+Every drop-down backed by a list ends with "+ Add new…" which shows an
+inline input and saves the new option for everyone.
+Period options everywhere: Today, This month (auto), Choose month, Last
+month, This year, All time, Custom dates.
+
+B11. EXPORTS (export.js)
+------------------------
+A report = {title, subtitle, filename, kpis:[[label,value]], alertKpis:[i],
+sections:[{title, head, rows, foot, right:[colIdx], money:[colIdx]}]}.
+* PDF: jsPDF A4 portrait (landscape if a table has more than 7 columns);
+  navy header band with white logo box (embedded base64 JPEG) and title;
+  subtitle; KPI tiles 4 per row (5 landscape); AutoTable grid tables (navy
+  head, zebra rows, totals row on last page only, right-aligned numbers,
+  "ORDER REQUIRED" cells red bold); footer "clinic · Generated …" and
+  "Page X of Y"; ₹ written as "Rs" (built-in fonts).
+* Excel: SheetJS workbook, a "Summary" sheet for KPIs, one sheet per
+  section with auto column widths.
+* JPEG: canvas 1240 × 1754 px (A4 at 150 dpi), same layout as the PDF;
+  long reports continue on extra images (-page-2.jpg …).
+* Saving: in Android call AndroidBridge.saveBase64(name, mime, base64);
+  in a browser download a Blob.
+
+B12. DESIGN
+-----------
+Colours: navy #0a2f55, brand #0e6fb5, sky #29a8e0, teal #0f9d8f,
+gold #d99a1e, violet #6c5bd4, bg #f3f6fb, ok #148a5e, warn #c0690f,
+danger #cc3b2f; full dark mode. Gradient header and hero, rounded 18 px
+cards, KPI tiles with coloured left bar, pill segmented controls, gradient
+primary buttons with hover shine, bottom sheet dialogs on phones, tables
+turn into cards under 700 px (headers marked "~" hidden on phones).
+Animations: cards/KPIs/lists rise in with staggered delays on screen change,
+numbers count up, floating centre Sale button, pulsing order banner,
+keypad press, dialog pop; all disabled for prefers-reduced-motion.
+
+B13. ANDROID
+------------
+Package com.hindivine.admin (Diet app stays com.hindivine.diet), label
+"Hindivine Admin", INTERNET permission. One Activity
+(com.hindivine.diet.MainActivity) hosts a WebView loading
+file:///android_asset/www/admin/index.html (start page from string resource
+start_page). JavaScript bridge "AndroidBridge": print(title), saveFile(name,
+mime, text), saveBase64(name, mime, base64) → system "Save as" dialog.
+File chooser supports several MIME types. Back button: ask the page
+(window.hdvBack()) first; exit only on a second press within 2 s on the home
+screen. Build without Android SDK/Gradle using android/build.sh
+(aapt2 from apktool, dx, apksig, android-all jar from Maven Central):
+  APP=admin VERSION_CODE=5 VERSION_NAME=3.1 ./android/build.sh
+Keep android/release.p12 (password dietchart) safe: updates must be signed
+with the same key.
+
+B15. VERSION 3.1 ADDITIONS
+--------------------------
+* Themes (per device, localStorage "hindivine.admin.theme"): royal, emerald,
+  purple, sunset, midnight (dark). <html data-theme="..."> overrides the CSS
+  variables --navy, --brand, --grad, --grad-btn, --side-bg, --nav-on, --glow.
+  Picked from the dots in the side-menu profile card or the account menu.
+* Side menu: profile card (avatar coloured by role, name, role, clinic),
+  menu search (filters as you type, Enter opens the first match), quick
+  actions + Sale / + OPD / + Lead, icon squares, items slide in one after
+  another when the menu opens on a phone.
+* App feel: body { user-select: none; -webkit-touch-callout: none } while
+  inputs, textareas and selects stay selectable; lighter effects on phones.
+* Reminders: bell in the top bar with a count (overdue + today follow-ups +
+  order required); it shakes when something is overdue. Reminders sheet:
+  overdue follow-ups, today's follow-ups, OPD waiting, order required,
+  renewal alerts; each follow-up has Call, WhatsApp, +1 h, Tomorrow, Update.
+  Shown once a day at sign-in when follow-ups are due. Every 30 s the app
+  checks for a follow-up whose time has come and shows a pop-up card at the
+  top (vibrates; snooze 15 min). Scope: Front Desk = own leads; others pick
+  "All follow-ups" or "Only mine" in the account menu (device preference
+  "hindivine.admin.prefs").
+* Android notifications: AndroidBridge.scheduleReminders(json) gets the
+  next 14 days of follow-ups (max 50, default time 10:00); ReminderReceiver
+  sets AlarmManager alarms (setAndAllowWhileIdle) and shows a notification
+  on channel "followups" that opens the app. notifyNow(title, text) shows
+  one immediately. Manifest: POST_NOTIFICATIONS, VIBRATE, the receiver.
+  Android 13+: the app asks for notification permission at start.
+* Leads: "Follow-ups" tab grouped Overdue / Today / Tomorrow / This week /
+  Later; one-tap follow-up chips (In 1 hour, Today 6 PM, Tomorrow 11 AM,
+  In 3 days, Next week) in the lead form and the lead update sheet.
+* OPD slip: button in the appointment sheet → A4 PDF "OPD SLIP" with token
+  number (position among that day's non-cancelled appointments by time),
+  date, time, visit type, patient details (name, mobile, age/gender, city),
+  visit details, payment, vitals boxes, Rx area and signature line.
+* Today Summary: Reference column on every sale (with % when shared) and a
+  "Sales by reference" board listing every active team member, including
+  those with no sales; both are in the PDF and the image.
+* Image export: always one JPEG file (A4 when it fits, otherwise one long
+  page); Android saves files one after another (queue in MainActivity).
+* PDF: big header on page 1, slim header on the next pages, tinted KPI
+  tiles, section bars with record counts, red/green status cells, totals,
+  two-line footer (generated time and person, credit, page x of y).
+
+B16. VERSION 3.2 ADDITIONS
+--------------------------
+* Today Summary export dialog (PDF / JPEG / Excel): parts to include (summary
+  boxes, sales, sales by reference, order required, OPD, purchases, stock
+  available / not available), extra sales columns (mobile, qty, incentive)
+  and filters (sale type, reference, new / renewal). Default = sales only
+  with Patient, Product, Amount, Type (New / Renewal), Reference. Choices are
+  remembered per device (prefs.todayExport); "Reset to default".
+* Product-wise incentive (Incentives screen): matrix of products (injections,
+  protein, diet plans) x Everyone + each team member; typing saves at once
+  (setRate(memberId|'', itemId|planId, value)). Member overrides are stored
+  in member.rates{}. Per-unit rate order: person+product -> product ->
+  person's own rate -> default.
+* Doctors and clinics: lists.doctors and lists.clinics (add / rename /
+  remove in Settings -> Doctors & clinics, "+ Add new" in the form);
+  appointment.doctor and appointment.branch; the last choice is remembered.
+  Settings also hold clinicAddress and clinicPhone.
+* OPD slip: header with clinic/branch, address, phone; strip with token,
+  date, time, visit, slip no. (OPD-yymmdd-NN); two panels (patient: name,
+  mobile, age/gender, city, visit no., patient since | visit: doctor,
+  clinic, treatment, type, status, booked by); payment boxes (fee, PAID /
+  UNPAID, method); notes; vitals (weight, height, BMI, BP, pulse, sugar);
+  Rx lines; next visit; doctor signature; footer with clinic details only
+  (no developer line).
+* Themes: + Black & Gold (dark) and Rose Gold; gold hairlines; Plus Jakarta
+  Sans font bundled in admin/vendor/fonts.
+* Pop-ups: a dialog can replace an open one; toasts and the reminder card
+  move into the open dialog so they are never hidden; info sheets close on
+  a tap outside; phones do not auto-focus inputs (no keyboard jump).
+* Google Sheet: Code.gs uses DATA_SHEET_ID (script property) -> the bound
+  sheet -> SHEET_ID; useNewSpreadsheet() copies the data into a new
+  spreadsheet, useCurrentSheet() goes back; load returns sheetName/sheetUrl
+  and Settings shows it. Requests time out after 25 s (save 45 s).
+
+B17. VERSION 3.3 ADDITIONS
+--------------------------
+* Sales take patient age, gender and city; findOrCreatePatient(name, mobile,
+  extra) stores non-empty age / gender / city / weight / height on the
+  patient. Known patients fill these in automatically in the sale and OPD
+  forms. Patients sheet gains Age, Gender, City, Weight, Height, BMI.
+* OPD appointment: "Patient details & vitals" (age, gender, weight, height,
+  BP, pulse, sugar) saved as appointment.vitals; live BMI; A.bmi(kg, cm)
+  and A.bmiLabel (Asian cut-offs: <18.5 under, <23 normal, <25 overweight,
+  <30 obese I, else obese II). The OPD slip prints all vitals and the BMI.
+* Today export can add Mobile, Age / Sex and City columns.
+* PDF / image reports: header with clinic name, address and phone, gold
+  line, info strip (report, records, prepared by, generated), outlined
+  tiles, "End of report", footer with clinic details and a page badge; no
+  developer line on any export.
+* Dashboard: greeting, revenue with margin, icon plates, quick actions; KPI
+  plates show an icon for well-known figures.
+* Settings in sections chosen from tiles: Clinic & doctors, Fees & rules,
+  Google Sheet, Logins, Permissions, Choice lists, Backup & data.
+
+B18. VERSION 3.4 ADDITIONS
+--------------------------
+* Dashboard: "Customize" sheet with the sections hero, quick, order, sales,
+  opd, patients, leads, team, stock, chart; hidden ones are saved per login
+  in prefs.dash[loginId] and hidden with CSS (.dash[data-hide~=x]). Top
+  performer removed. kpi(label, value, sub, cls, link) makes a box tappable
+  (class "tap", data-act="dash-go", data-k): sales[-injection|-protein|-diet|
+  -new|-renewal], appts[-today|-clinic|-online|-completed|-paid|-unpaid],
+  patients[-active], leads-all|open|won|follow, inv-<category>|inv-low,
+  renewals, reports, expenses, team, incentives, salary.
+* Shared filters: GF[screen] with fSearch / fSelect / filterRow / fClear /
+  qHit / fv; search boxes redraw 220 ms after typing stops. Added to Today,
+  Patients (gender, age band, city, buyers / OPD only), Renewals, Products,
+  Inventory, Purchases (vendor, product), Team, Incentives, Salary, Expenses.
+  The same functions build the exports, so files follow the filters.
+* Export options for every screen (exportForm): PDF / image / Excel, a
+  different period for the file (runExport swaps `period` while building),
+  summary boxes on/off (saved per report in prefs.exportOpts), and the active
+  screen filters listed. Image exports are limited to 8000 px tall.
+
+B19. VERSION 3.5 ADDITIONS
+--------------------------
+* Protein sales have patientType '' (no New / Renewal) and the sale form
+  hides the choice for protein; for injections "renewal" means the patient
+  already bought an injection before.
+* Today: injection, protein and diet sales in separate boxes (patient line
+  shows mobile, age, gender); the hero shows injection and protein totals;
+  exports have one section per sale type and KPI boxes for each.
+* Image (JPEG) export lays tables out first: numbers, phone, age, date,
+  type columns keep their full width, other text wraps to up to 3 lines,
+  font size adapts to the column count; row heights follow the wrapped text.
+
+B20. VERSION 3.6 ADDITIONS
+--------------------------
+* admin/js/config.js sets window.HDV_CONFIG = { sheetsUrl, sheetsSecret,
+  sheetName } (empty in the public repository). A clinic build fills it:
+  SHEET_ENV=android/sheet.env OUT=<path> APP=admin ./android/build.sh, where
+  sheet.env (git-ignored) has HDV_SHEET_URL and HDV_SHEET_SECRET. Never commit
+  that APK or the file to a public repository.
+* On start the app copies the built-in link into its settings unless this
+  device disconnected (localStorage hindivine.admin.sheetOff = 1). A device
+  with no logins yet shows "Connecting…", loads the sheet, then the sign-in
+  screen; an empty sheet asks for the first Super Admin PIN; no internet
+  shows "Can't reach the Google Sheet" with Try again / Change link. Devices
+  with logins sign in at once and refresh the sheet in the background
+  (without clearing a PIN being typed).
+* Settings → Google Sheet: status, Test connection, Sync now, Disconnect,
+  Connect to the clinic sheet (built-in link), change link / secret.
+* More premium side menu: gold-trimmed groups, glass profile and icons.
+
+B21. VERSION 3.7 ADDITIONS
+--------------------------
+* targetSdkVersion 35 (Android 15) so Google Play Protect does not block the
+  install as "built for an older version of Android". Not 36: Android 16
+  stops calling onBackPressed (predictive back), which the app relies on.
+* Android 15 draws apps edge to edge: the WebView sits in a FrameLayout
+  (navy background) whose padding follows the system bar, cut-out and
+  keyboard insets (OnApplyWindowInsetsListener, API 35+ only).
+* No WebView saveState (could exceed Android's size limit and crash when the
+  app went to the background); onRenderProcessGone removes and destroys
+  the dead WebView before recreating; onDestroy and print guard null.
+* Faster screens with large data (patients grouped once; activity log shows
+  120 entries with "Show more"); tap ripple animation; toast pop-in.
+
+B22. VERSION 3.8 ADDITIONS
+--------------------------
+* Automatic merge instead of "Data changed on another device": every save
+  stamps changed records with _t (time) by comparing a hash of each record
+  with the last known one; records that disappear are kept in S.deleted
+  ("collection:id" → time, kept 90 days). A.mergeStates(local, remote) joins
+  categories, items, team, patients, sales, purchases, expenses, moves,
+  appointments, leads and accounts by id (newest _t wins, deleted stays
+  deleted), takes the newer settings, unions renewalsDone and the log.
+  On a save conflict, or when the sheet changed while this device had
+  unsaved changes, the app loads the merge and saves it (no dialog).
+
+B23. VERSION 3.9 ADDITIONS
+--------------------------
+* Settings: clinicEmail, invoicePrefix (default HV), legalNote (invoice
+  terms, default says computer-generated / no signature / non-GST / not
+  returnable / local jurisdiction), docNote (printed on reports, images and
+  OPD slips; empty = none). Sales keep payMethod.
+* admin.invoiceFor('sale'|'opd', id) gives a number once and keeps it on the
+  record: PREFIX/INV|OPD/<financial year 26-27>/0001, next = highest used + 1.
+* EXPORT.invoice(inv): A4 non-GST invoice: navy header with logo, "NON-GST
+  INVOICE" chip, From (clinic) + invoice number / date / payment box, Billed
+  to (patient, mobile, age/gender, city, extra details), items table (#,
+  description, qty, rate, amount), totals box (sub total, GST not
+  applicable, Total, paid, balance due), amount in words (Indian lakh /
+  crore), terms & notes, "Computer-generated invoice. No signature
+  required.", thank-you footer. Buttons: Sales list "Invoice", Today ₹,
+  appointment sheet "OPD invoice".
+* admin.logEvent(action, detail, by): Signed in (real sign-in, not reload),
+  Signed out, Wrong PIN, Auto-locked; Activity filter "Sign-ins & security"
+  and sign-in count / last sign-in per person.
+
+B24. VERSION 4.0 ADDITIONS
+--------------------------
+* WhatsApp sharing: EXPORT.opdSlip / EXPORT.invoice take opts {share, phone,
+  text}. Android: AndroidBridge.shareFile(name, mime, base64, phone, text)
+  writes cache/share/<name>, serves it through ShareProvider (authority
+  <package>.files, not exported, grantUriPermissions) and sends ACTION_SEND
+  to com.whatsapp (then WhatsApp Business, then the share menu) with
+  extra "jid" = 91<mobile>@s.whatsapp.net so the patient's chat opens.
+  Browser: navigator.share with the file, else save + open wa.me/<number>.
+  Buttons: appointment sheet "Share slip" / "Share invoice"; invoice options
+  "Share on WhatsApp".
+* Purchase invoice options (invoiceDialog): item name (settings
+  invoiceItemName, default "Weight Loss Program") and program months; the
+  invoice line reads "Weight Loss Program (3 Months)" with qty 1 and never
+  the product name. Kept on the sale (invoiceDesc, programMonths); sale form
+  has an optional "Program months".
+
+B25. VERSION 4.1 ADDITIONS
+--------------------------
+* Code.gs WhatsApp: POST ?hook=whatsapp&key=<secret> (webhook from Heyo /
+  MyOperator) → waExtract finds messages in Meta Cloud API payloads or any
+  object with a phone-like and a text-like field → appended (deduplicated by
+  message id) to the "WhatsApp" tab: Received, At (ms, hidden), Direction,
+  Phone, Name, Message, Type, Message ID, Raw. GET action=wa&since=<ms>
+  returns newer messages; action=wapull first runs pullWhatsApp, which calls
+  https://publicapi.myoperator.co + MYOP_LIST_PATH with x-api-key (Script
+  Properties MYOP_API_KEY, MYOP_COMPANY_ID, MYOP_LIST_PATH);
+  installWhatsAppPull adds a 5-minute trigger.
+* Settings waOn (show WhatsApp) and waAutoLead (default on). The app keeps
+  messages in localStorage (hindivine.admin.wa, newest 3000), fetches every
+  45 s, and admin.importWhatsApp adds incoming messages to leads: id
+  "wa<10 digits>" (same on every device), source WhatsApp, history type
+  "whatsapp" (newest 40 kept, deduplicated by message id); numbers that are
+  patients do not become leads.
+* WhatsApp screen (allowed with Leads): chats with unread counts (device
+  pref waSeen), search, Fetch now; chat sheet with bubbles, Reply on
+  WhatsApp (wa.me), Open lead / + Lead, Book OPD. Settings → Google Sheet
+  card (Super Admin): switches, webhook link with copy, set-up steps.
+
+B26. VERSION 4.2 ADDITIONS
+--------------------------
+* settings.waLeadPhrases (default ["Hello! Can I get more info on this?"]):
+  importWhatsApp makes a lead for a new number only when the message
+  contains one of the phrases (lower-case, spaces collapsed); empty list =
+  any message. Messages from existing leads still go into their history.
+  Settings → Google Sheet → WhatsApp: textarea + "Save lead message".
+
+B27. VERSION 4.3 ADDITIONS
+--------------------------
+* Code.gs: script property LEADS_SHEET_ID = separate leads spreadsheet.
+  writeSheets puts LEAD_TABS (Leads) there and leaves a pointer note in the
+  main sheet's tab; the WhatsApp tab (waSheet / waRead) also lives there.
+  POST {action:'leadsSheet', secret, mode:'new'|'connect'|'main', ref}:
+  'new' creates "Hindivine Leads", 'connect' opens a sheet by link / id,
+  'main' clears the property; WhatsApp rows are copied to the new place.
+  The load answer includes leadsSheet {separate, name, url}.
+* App: Settings → Google Sheet → "Leads spreadsheet" card (Super Admin):
+  status with link, Create new leads sheet, Connect this sheet (link box),
+  Use main sheet; after a change the app saves so the Leads tab is written
+  in its new place.
+
+B28. VERSION 4.4 ADDITIONS
+--------------------------
+* core.importLeads(rows, {source, onlyPhrases, fileName}): rows {phone,
+  name, message, date, city}; skips numbers under 10 digits and (when
+  onlyPhrases) rows without a lead phrase; numbers already leads, patients
+  or repeated in the file count as dupes; WhatsApp source → id wa<10 digits>;
+  history "Imported from <file>" + the message; returns {added, skipped,
+  dupes}.
+* App: Leads toolbar "Import", WhatsApp toolbar "Import Heyo export",
+  Settings WhatsApp card button. readImportFile uses SheetJS (CSV / XLSX);
+  header row = the row in the first 10 naming the most known columns
+  (COLS regexes for phone, name, message, date, city); preview dialog with
+  detected columns, lead source, "only ad-message rows" checkbox, 6 rows.
+* Code.gs: GET action=myopprobe → probeMyOperator() tries common MyOperator
+  list paths with MYOP_API_KEY / MYOP_COMPANY_ID (x-api-key and Bearer) and
+  returns [{path, status, messages, sample}]; app action "Test MyOperator
+  API" shows it as a table.
+* Log in to MyOperator inside the Android app (no webhook): HeyoActivity
+  opens the panel in a logged-in WebView and a small injected script copies
+  every JSON reply the panel loads to HeyoStore (in memory only; the app
+  makes no request of its own). AndroidBridge.openHeyo / heyoTake /
+  heyoPending / heyoLogout. core.parseChatCapture(data, ownNumbers) reads
+  any JSON shape into {msgs, convs}; core.heyoSync({msgs, convs}) makes
+  leads (importWhatsApp rules) and sets lead.assignedTo from the chat's
+  agent via heyoAccount (saved map settings.heyoAgents, else same / unique
+  first name); it follows the panel only while lead.heyoAgent is unchanged,
+  so a hand-made change in the app is kept. Settings → WhatsApp "Connect
+  MyOperator" card (panel link, own waNumber, assign toggle, open / sync /
+  log out) and a "Match MyOperator people" dialog for unknown agents
+  (settings.heyoSeen lists agents seen).
+
+B14. TESTS (node --test tests/*.test.js)
+----------------------------------------
+Defaults; incentive split; injection sale (stock out, renewal detection,
+dashboard); shared reference; protein per sale and overrides; product
+matching; purchases (stock + expense, duplicate invoice refused); salary +
+expense booking; 75/90-day renewals; OPD fees; logins migration and rules;
+per-member rates, pay mode and kit deduction; stock alerts and order
+required; patient edit/delete; editable lists; leads flow; activity log;
+stock report and sheet rows; backup; Google Sheet export/load.
+
+
+################################################################################
+ PART C — REBUILD & RELEASE CHECKLIST
+################################################################################
+ 1. Recreate the files (from "Hindivine_Admin_Full_Source.txt": run its
+    unpack command, or copy each block into its path).
+ 2. Download the three vendor libraries into admin/vendor/:
+      npm pack jspdf@2.5.2 jspdf-autotable@3.8.4 xlsx@0.18.5
+    and copy dist/jspdf.umd.min.js, dist/jspdf.plugin.autotable.min.js,
+    dist/xlsx.mini.min.js.
+ 3. Keep img/logo.jpg, img/icon-192.png, img/icon-512.png and the Android
+    launcher icons (android/res/mipmap-*) from the repository.
+ 4. Run the tests:  npm test   (Node 18+).
+ 5. Try it in a browser:  npx serve .   then open /admin/.
+ 6. Google Sheet: open the sheet → Extensions → Apps Script → paste Code.gs →
+    run setup → Deploy → Web app (Execute as Me, access Anyone) → paste URL +
+    secret in the app (sign-in screen "Connect Google Sheet" or Settings).
+    After changing Code.gs: Deploy → Manage deployments → New version.
+ 7. Build the APK (Java 11+, curl, zip/unzip):
+      APP=admin VERSION_CODE=<next> VERSION_NAME=<x.y> ./android/build.sh
+    Output: dist/HindivineAdmin.apk. Always sign with the same release.p12.
+ 8. Raise APP_VERSION in app.js, the service worker cache name in sw.js and
+    add an entry to the CHANGELOG list in app.js.
+================================================================================
