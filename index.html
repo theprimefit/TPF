@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Hindivine Diet</title>
+  <meta name="description" content="Hindivine Diet — premium 1–7 day Indian and worldwide diet charts with recipes in 10 languages: weight loss, diabetes, PCOS, thyroid, travel and more, as a 2-page A4 PDF.">
+  <meta name="theme-color" content="#0A2F55">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Hindivine Diet">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" href="img/icon-192.png">
+  <link rel="apple-touch-icon" href="img/icon-192.png">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app no-print">
+    <!-- App bar -->
+    <header class="appbar">
+      <div class="appbar-row">
+        <button type="button" class="icon-btn" id="menu" aria-label="Menu" title="Menu">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+        <button type="button" class="icon-btn back" id="back" aria-label="Back" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        <div class="appbar-title">
+          <img src="img/logo.jpg" alt="Hindivine Healthcare" class="appbar-logo" id="appbar-logo" width="900" height="308">
+          <div class="appbar-text" id="appbar-text" hidden>
+            <b id="screen-title"></b>
+            <small id="screen-sub"></small>
+          </div>
+        </div>
+        <button type="button" class="icon-btn" id="go-library" aria-label="Food library" title="Food library">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>
+        </button>
+      </div>
+      <div class="progress" id="progress" hidden><span id="progress-bar"></span></div>
+    </header>
+
+    <!-- Side menu -->
+    <div class="scrim" id="scrim" hidden></div>
+    <aside class="drawer" id="drawer" aria-label="Main menu" hidden>
+      <div class="drawer-head">
+        <img src="img/icon-192.png" alt="" width="52" height="52">
+        <div><b>Hindivine Diet</b><small id="drawer-sub">Diet charts · Recipes · Patients</small></div>
+      </div>
+      <nav class="drawer-nav" id="drawer-nav"></nav>
+      <div class="drawer-foot">Hindivine Healthcare Pvt. Ltd.<br>www.hindivine.com</div>
+    </aside>
+
+    <form id="profile-form" novalidate>
+      <!-- ── Dashboard ────────────────────────────────── -->
+      <section class="screen home" data-screen="home" data-title="Dashboard">
+        <div class="dash-hero">
+          <div class="dash-hello">
+            <small id="dash-greet">Namaste</small>
+            <h1 id="dash-name">Hindivine Diet</h1>
+            <p>Diet charts, recipes &amp; patient follow-ups — in 10 languages.</p>
+          </div>
+          <button type="button" class="hero-cta" data-go="s1">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>New diet chart</span>
+          </button>
+          <div class="kpis" id="kpis"></div>
+        </div>
+        <button type="button" class="continue-card" id="continue-chart" hidden>
+          <span class="cc-icon">📋</span>
+          <span class="cc-text"><small>Continue last chart</small><b id="continue-title"></b><span id="continue-sub"></span></span>
+          <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+        <h2 class="sec-title">Quick actions</h2>
+        <div class="quick-grid" id="quick-grid"></div>
+        <div class="sec-row"><h2 class="sec-title">Recent charts</h2><button type="button" class="link-btn" data-go="charts">See all</button></div>
+        <div class="list" id="recent-charts"></div>
+        <ul class="feature-list">
+          <li>Recipe for every dish</li>
+          <li>Kcal &amp; protein from ingredients</li>
+          <li>Next-week charts in one tap</li>
+          <li>1–7 days · 2 languages</li>
+        </ul>
+      </section>
+
+      <!-- ── Step 1: Patient ──────────────────────────── -->
+      <section class="screen" data-screen="s1" data-step="1" data-title="Patient details" hidden>
+        <div class="card patient-pick" id="patient-pick-card">
+          <label>Saved patient
+            <select id="patient-pick"></select>
+          </label>
+          <input type="hidden" name="patientRef" value="">
+        </div>
+        <div class="card">
+          <label>Patient name
+            <input name="name" type="text" placeholder="Full name (optional for generic charts)" autocomplete="off">
+          </label>
+          <div class="row">
+            <label>Patient ID
+              <input name="patientId" type="text" placeholder="Optional" autocomplete="off">
+            </label>
+            <label>Mobile
+              <input name="phone" type="tel" placeholder="Optional" autocomplete="off">
+            </label>
+          </div>
+        </div>
+        <div class="card">
+          <p class="card-note">Age, sex, height and weight are optional — without them the chart uses standard targets.</p>
+          <div class="row">
+            <label>Age
+              <input name="age" type="number" min="14" max="90" placeholder="Optional" inputmode="numeric">
+            </label>
+            <div class="field">
+              <span class="field-label">Sex</span>
+              <div class="seg" data-name="sex">
+                <button type="button" data-value="female" aria-pressed="true">Female</button>
+                <button type="button" data-value="male" aria-pressed="false">Male</button>
+                <button type="button" data-value="" aria-pressed="false">—</button>
+              </div>
+              <input type="hidden" name="sex" value="female">
+            </div>
+          </div>
+          <div class="row">
+            <label>Height (cm)
+              <input name="heightCm" type="number" min="120" max="230" placeholder="Optional" inputmode="decimal">
+            </label>
+            <label>Weight (kg)
+              <input name="weightKg" type="number" min="30" max="250" step="0.1" placeholder="Optional" inputmode="decimal">
+            </label>
+          </div>
+          <div class="bmi-live" id="bmi-live"></div>
+        </div>
+        <div class="card">
+          <label>Medical notes
+            <input name="notes" type="text" placeholder="e.g. HbA1c 7.2, on metformin" autocomplete="off">
+          </label>
+        </div>
+      </section>
+
+      <!-- ── Step 2: Diet plan & targets ──────────────── -->
+      <section class="screen" data-screen="s2" data-step="2" data-title="Diet plan & targets" hidden>
+        <div class="card">
+          <div class="field">
+            <span class="field-label">Chart type</span>
+            <div class="seg" data-name="chartType">
+              <button type="button" data-value="regular" aria-pressed="true">Regular diet</button>
+              <button type="button" data-value="travel" aria-pressed="false">Travel diet</button>
+            </div>
+            <input type="hidden" name="chartType" value="regular">
+          </div>
+          <label class="travel-only" hidden>Travel type
+            <select name="travel" id="travel"></select>
+          </label>
+          <label>Type of diet
+            <select name="plan" id="plan"></select>
+          </label>
+          <div class="row">
+            <label>Weight goal
+              <select name="weightGoal">
+                <option value="plan">As per diet plan</option>
+                <option value="lose">Lose weight</option>
+                <option value="maintain">Maintain</option>
+                <option value="gain">Gain weight</option>
+              </select>
+            </label>
+            <label>Activity
+              <select name="activity" id="activity"></select>
+            </label>
+          </div>
+        </div>
+        <div class="card">
+          <div class="field">
+            <span class="field-label">Calories per day</span>
+            <div class="chips" data-single="kcalTarget" id="kcal-chips"></div>
+            <input name="kcalTarget" type="number" min="800" max="4500" step="50" placeholder="Custom kcal (blank = auto)" inputmode="numeric" class="chip-input">
+          </div>
+          <div class="field">
+            <span class="field-label">Protein per day</span>
+            <div class="chips" data-single="proteinTarget" id="protein-chips"></div>
+            <input name="proteinTarget" type="number" min="20" max="250" step="5" placeholder="Custom grams (blank = auto)" inputmode="numeric" class="chip-input">
+          </div>
+          <div class="field">
+            <span class="field-label">Water per day</span>
+            <div class="chips" data-single="waterL" id="water-chips"></div>
+            <input name="waterL" type="number" min="1" max="6" step="0.25" placeholder="Custom litres (blank = auto)" inputmode="decimal" class="chip-input">
+          </div>
+          <div class="target-live" id="target-live"></div>
+        </div>
+        <div class="card">
+          <div class="field">
+            <span class="field-label">Other conditions</span>
+            <div class="chips" data-multi="conditions" id="condition-chips"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Step 3: Food preferences ─────────────────── -->
+      <section class="screen" data-screen="s3" data-step="3" data-title="Food preferences" hidden>
+        <div class="card">
+          <div class="field">
+            <span class="field-label">Food type</span>
+            <div class="seg wrap-seg" data-name="diet" id="diet-seg"></div>
+            <input type="hidden" name="diet" value="veg">
+          </div>
+          <div class="field">
+            <span class="field-label">Diet combination <small>(mix of veg, egg &amp; non-veg — overrides food type)</small></span>
+            <div class="chips" data-single="mixKey" id="mix-chips"></div>
+            <input type="hidden" name="mixKey" value="">
+          </div>
+          <div class="field">
+            <span class="field-label">Cuisine <small>(none selected = all Indian)</small></span>
+            <div class="chips" data-multi="regions" id="region-chips"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="field">
+            <span class="field-label">Foods the patient likes <small>— type any food, e.g. poha, paneer, idli</small></span>
+            <div class="tag-input" data-tags="likes">
+              <div class="tags-box"></div>
+              <input type="text" list="food-suggest" placeholder="Type a food and press Enter" autocomplete="off">
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-label">Foods to avoid <small>— type any food, e.g. karela, brinjal</small></span>
+            <div class="tag-input" data-tags="dislikes">
+              <div class="tags-box"></div>
+              <input type="text" list="food-suggest" placeholder="Type a food and press Enter" autocomplete="off">
+            </div>
+          </div>
+          <datalist id="food-suggest"></datalist>
+        </div>
+        <div class="card">
+          <div class="field">
+            <span class="field-label">Quick exclusions</span>
+            <div class="chips" data-multi="excludes" id="exclude-chips"></div>
+          </div>
+          <div class="field">
+            <span class="field-label">Allergies</span>
+            <div class="chips" data-multi="allergies" id="allergy-chips"></div>
+          </div>
+          <label class="switch"><input type="checkbox" name="preferWl"> <span>Prefer weight-loss foods</span></label>
+        </div>
+      </section>
+
+      <!-- ── Step 4: Schedule & language ──────────────── -->
+      <section class="screen" data-screen="s4" data-step="4" data-title="Schedule & chart language" hidden>
+        <div class="card">
+          <div class="field">
+            <span class="field-label">Number of days</span>
+            <div class="chips" data-single="days" id="days-chips"></div>
+            <input type="hidden" name="days" value="7">
+          </div>
+          <div class="row">
+            <label>Chart language
+              <select name="chartLang" id="chart-lang"></select>
+            </label>
+            <label>Second language <small>(optional)</small>
+              <select name="chartLang2" id="chart-lang2"></select>
+            </label>
+          </div>
+          <div class="row">
+            <label>Chart starts on
+              <select name="startDay" id="start-day"></select>
+            </label>
+            <span></span>
+          </div>
+          <div class="row">
+            <label>Meals per day
+              <select name="meals">
+                <option value="3">3 meals</option>
+                <option value="4">4 (3 + snack)</option>
+                <option value="5" selected>5 (3 + 2 snacks)</option>
+                <option value="6">6 (+ bedtime)</option>
+              </select>
+            </label>
+            <label class="switch inline"><input type="checkbox" name="earlyDrink" checked> <span>Early-morning drink</span></label>
+          </div>
+        </div>
+        <div class="card">
+          <span class="field-label">Meal timings</span>
+          <div class="times" id="times"></div>
+        </div>
+      </section>
+
+      <!-- ── Step 5: Dietitian & create ───────────────── -->
+      <section class="screen" data-screen="s5" data-step="5" data-title="Dietitian & create" hidden>
+        <div class="card">
+          <label>Dietitian name
+            <input name="dietitian" type="text" placeholder="e.g. Ms. Priya Verma" autocomplete="name">
+          </label>
+          <div class="row">
+            <label>Qualification
+              <input name="qualification" type="text" placeholder="e.g. M.Sc. Nutrition">
+            </label>
+            <label>Contact
+              <input name="dietitianPhone" type="tel" placeholder="Optional">
+            </label>
+          </div>
+        </div>
+        <div class="card summary-card" id="review"></div>
+        <p id="form-error" class="error" role="alert" hidden></p>
+      </section>
+
+      <!-- ── Chart ────────────────────────────────────── -->
+      <section class="screen chart-screen" data-screen="chart" data-title="Diet chart" hidden>
+        <div id="result"></div>
+      </section>
+
+      <!-- ── Food library ─────────────────────────────── -->
+      <section class="screen" data-screen="library" data-title="Food library" hidden>
+        <div class="card library-head">
+          <input type="search" id="lib-search" placeholder="Search foods — English or हिन्दी, e.g. dosa, पनीर" aria-label="Search foods">
+          <div class="row three">
+            <label>Category<select id="lib-category"></select></label>
+            <label>Cuisine<select id="lib-region"></select></label>
+            <label>Food type<select id="lib-diet"></select></label>
+          </div>
+          <div class="row">
+            <label>Calories up to<select id="lib-kcal"><option value="">Any</option><option value="100">100 kcal</option><option value="200">200 kcal</option><option value="300">300 kcal</option><option value="450">450 kcal</option></select></label>
+            <label>Sort by<select id="lib-sort"><option value="">Best match</option><option value="name">Name (A–Z)</option><option value="kcal">Calories (low first)</option><option value="protein">Protein (high first)</option></select></label>
+          </div>
+          <div class="chips" id="lib-filters"></div>
+        </div>
+        <p class="lib-count" id="lib-count"></p>
+        <div class="food-grid" id="lib-list"></div>
+      </section>
+    </form>
+
+    <!-- ── Patients ─────────────────────────────────── -->
+    <section class="screen" data-screen="patients" data-title="Patients" hidden>
+      <div class="search-card"><input type="search" id="pt-search" placeholder="Search patients by name, ID or mobile" aria-label="Search patients"></div>
+      <div class="list" id="pt-list"></div>
+    </section>
+    <section class="screen" data-screen="patient" data-title="Patient" hidden>
+      <div id="pt-detail"></div>
+    </section>
+
+    <!-- ── Saved charts ─────────────────────────────── -->
+    <section class="screen" data-screen="charts" data-title="Saved diet charts" hidden>
+      <div class="search-card"><input type="search" id="ch-search" placeholder="Search charts by patient or diet" aria-label="Search charts"></div>
+      <div class="list" id="ch-list"></div>
+    </section>
+
+    <!-- ── Recipes ──────────────────────────────────── -->
+    <section class="screen" data-screen="recipes" data-title="Recipes" hidden>
+      <div class="card library-head">
+        <input type="search" id="rc-search" placeholder="Search recipes — English or हिन्दी, e.g. poha, dal, पनीर" aria-label="Search recipes">
+        <div class="row">
+          <label>Category<select id="rc-category"></select></label>
+          <label>Food type<select id="rc-diet"></select></label>
+        </div>
+      </div>
+      <p class="lib-count" id="rc-count"></p>
+      <div class="recipe-grid" id="rc-list"></div>
+    </section>
+    <section class="screen" data-screen="recipe" data-title="Recipe" hidden>
+      <div id="rc-detail"></div>
+    </section>
+
+    <!-- ── Upload previous chart ────────────────────── -->
+    <section class="screen" data-screen="upload" data-title="Upload previous chart" hidden>
+      <label class="dropzone" for="pdf-file">
+        <span class="dz-icon">📄</span>
+        <b>Choose last week's diet chart PDF</b>
+        <small>Charts made with Hindivine Diet are read exactly (patient, targets and every meal). Other PDFs: the foods in them are found by name.</small>
+        <input type="file" id="pdf-file" accept="application/pdf,.pdf">
+      </label>
+      <div id="upload-result"></div>
+    </section>
+
+    <!-- ── Settings ─────────────────────────────────── -->
+    <section class="screen" data-screen="settings" data-title="Settings & backup" hidden>
+      <div class="card">
+        <h3>Dietitian (printed on every chart)</h3>
+        <label>Dietitian name<input type="text" id="set-dietitian" placeholder="e.g. Ms. Priya Verma"></label>
+        <div class="row">
+          <label>Qualification<input type="text" id="set-qualification" placeholder="e.g. M.Sc. Nutrition"></label>
+          <label>Contact<input type="tel" id="set-phone" placeholder="Optional"></label>
+        </div>
+        <button type="button" class="btn primary" id="set-save">Save</button>
+      </div>
+      <div class="card">
+        <h3>Backup</h3>
+        <p class="muted">Patients and charts are stored on this device. Export a backup file to keep them safe or move them to another phone.</p>
+        <div class="btn-row">
+          <button type="button" class="btn" id="backup-export">Export backup</button>
+          <label class="btn file-btn">Import backup<input type="file" id="backup-import" accept="application/json,.json"></label>
+        </div>
+      </div>
+      <div class="card">
+        <h3>About</h3>
+        <div id="about"></div>
+        <button type="button" class="btn danger-btn" id="wipe">Delete all patients &amp; charts</button>
+      </div>
+    </section>
+
+    <!-- Bottom bars -->
+    <nav class="bottom-bar tab-bar" id="tab-bar"></nav>
+    <nav class="bottom-bar" id="step-bar" hidden>
+      <button type="button" class="btn ghost" id="step-back">Back</button>
+      <button type="button" class="btn primary" id="step-next">Next</button>
+    </nav>
+    <nav class="bottom-bar create-bar" id="create-bar" hidden>
+      <button type="button" class="btn ghost" id="manual-start">Build manually</button>
+      <button type="button" class="btn primary" id="generate">Generate chart</button>
+    </nav>
+    <nav class="bottom-bar chart-bar" id="chart-bar" hidden>
+      <button type="button" class="bar-btn" id="pdf-named"><svg viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5M9 14h6M9 17h4"/></svg><span>PDF with name</span></button>
+      <button type="button" class="bar-btn" id="pdf-anon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6M3 3l18 18"/></svg><span>PDF without name</span></button>
+      <button type="button" class="bar-btn" id="next-week"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M10 15h6M13 12l3 3-3 3"/></svg><span>Next week</span></button>
+      <button type="button" class="bar-btn" id="regen"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></svg><span>New plan</span></button>
+      <button type="button" class="bar-btn" id="more"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg><span>More</span></button>
+    </nav>
+  </div>
+
+  <!-- Action sheet -->
+  <dialog id="sheet" class="sheet no-print">
+    <div class="sheet-inner" id="sheet-body"></div>
+  </dialog>
+
+  <!-- Recipe view / recipe picker -->
+  <dialog id="rdialog" class="editor no-print">
+    <div class="editor-inner">
+      <header class="editor-head">
+        <div><h2 id="rd-title"></h2><p id="rd-sub"></p></div>
+        <button type="button" class="icon-btn" data-close aria-label="Close">✕</button>
+      </header>
+      <div class="editor-body" id="rd-body"></div>
+      <footer class="editor-foot" id="rd-foot"></footer>
+    </div>
+  </dialog>
+
+  <!-- Meal editor -->
+  <dialog id="editor" class="editor no-print">
+    <div class="editor-inner">
+      <header class="editor-head">
+        <div>
+          <h2 id="editor-title">Edit meal</h2>
+          <p id="editor-sub"></p>
+        </div>
+        <button type="button" class="icon-btn" data-close aria-label="Close">✕</button>
+      </header>
+      <div class="editor-body">
+        <div id="editor-items"></div>
+        <div class="editor-totals" id="editor-totals"></div>
+        <div class="editor-search">
+          <input type="search" id="editor-q" placeholder="Search foods to add — English or हिन्दी" aria-label="Search foods">
+          <div class="row">
+            <select id="editor-category" aria-label="Category"></select>
+            <select id="editor-sort" aria-label="Sort"><option value="">Best match</option><option value="kcal">Calories (low first)</option><option value="protein">Protein (high first)</option><option value="name">Name (A–Z)</option></select>
+          </div>
+          <div class="chips small" id="editor-filters"></div>
+          <div class="editor-results" id="editor-results"></div>
+          <details class="custom-food">
+            <summary>Add a food that is not in the list</summary>
+            <div class="row three">
+              <input id="cf-name" type="text" placeholder="Food name">
+              <input id="cf-qty" type="text" placeholder="Qty, e.g. 1 bowl">
+              <input id="cf-kcal" type="number" placeholder="kcal">
+            </div>
+            <div class="row">
+              <input id="cf-protein" type="number" placeholder="Protein g (optional)">
+              <button type="button" class="btn" id="cf-add">Add food</button>
+            </div>
+          </details>
+        </div>
+        <div class="apply-days">
+          <span class="field-label">Also use this meal on</span>
+          <div class="chips small" id="apply-days"></div>
+        </div>
+      </div>
+      <footer class="editor-foot">
+        <button type="button" class="btn ghost" data-close>Cancel</button>
+        <button type="button" class="btn primary" id="editor-save">Save meal</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <!-- A4 print sheet, filled by app.js -->
+  <div id="print-sheet" class="print-only" aria-hidden="true"></div>
+
+  <script src="js/foodnames.js"></script>
+  <script src="js/ingredients.js"></script>
+  <script src="js/recipes.js"></script>
+  <script src="js/fooddb.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/icons.js"></script>
+  <script src="js/planner.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

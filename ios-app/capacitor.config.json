@@ -1,0 +1,6 @@
+{
+  "appId": "com.hindivine.diet",
+  "appName": "Hindivine Diet",
+  "webDir": "www",
+  "ios": { "contentInset": "always", "backgroundColor": "#0A2F55" }
+}

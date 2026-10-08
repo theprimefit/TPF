@@ -1,0 +1,15 @@
+{
+  "name": "Hindivine Diet",
+  "short_name": "Hindivine Diet",
+  "description": "Diet charts (1–7 days), recipes and patient follow-ups by Hindivine Healthcare.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f3f6fa",
+  "theme_color": "#0A2F55",
+  "icons": [
+    { "src": "img/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

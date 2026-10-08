@@ -1,0 +1,8 @@
+node_modules/
+.DS_Store
+android/.tools/
+android/build/
+android/*.p12
+android/*.jks
+ios-app/node_modules/
+ios-app/www/

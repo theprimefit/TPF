@@ -1,0 +1,16 @@
+{
+  "name": "hindivine-diet-ios",
+  "private": true,
+  "description": "iOS wrapper for Hindivine Diet (Capacitor). Build on a Mac with Xcode.",
+  "scripts": {
+    "sync": "node copy-web.js && npx cap sync ios",
+    "open": "npx cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/ios": "^7.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.0.0"
+  }
+}
