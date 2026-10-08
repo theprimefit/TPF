@@ -44,6 +44,51 @@ Hindivine Diet builds personalised **1–7 day Indian and worldwide diet charts*
 - **Languages:** English, हिन्दी, मराठी, ગુજરાતી, বাংলা, ਪੰਜਾਬੀ, தமிழ், తెలుగు, ಕನ್ನಡ, മലയാളം. Any two can be combined.
 - **Backup:** export or import all patients and charts as a file (Settings). CSV export is also available.
 
+## Hindivine Admin app (`admin/`) — version 4.0
+
+A separate app for running the clinic. **Android:** install [`dist/HindivineAdmin.apk`](dist/HindivineAdmin.apk) (Android 7.0+, built for Android 15 so Play Protect accepts it; installs next to Hindivine Diet). **Web / iPhone:** open `admin/index.html`, or host the folder and *Add to Home Screen*.
+
+**Logins.** Every person signs in with their own name and PIN (4–6 digits, a random 6-digit PIN is suggested). PINs are shared through the Google Sheet, so they work on every device. The Super Admin adds, edits, disables and deletes logins, and can see and reset staff PINs (the Super Admin PIN is never shown).
+
+| Role | Default access (editable in Settings → Roles & permissions) |
+| --- | --- |
+| **Super Admin** | Everything, always |
+| **Admin** | Everything except Settings; can delete records |
+| **Manager** | Dashboard, Today, OPD, Leads, sales, patients, renewals, products, inventory, purchases, expenses, reports, activity log |
+| **Front Desk** | OPD appointments and Leads (their own leads and unassigned ones) |
+
+The app logs out after 15 minutes without use. On Android, back goes to the previous screen and exits only with a second press on the home screen. Bottom menu: **Dashboard · Today · Sale · OPD · Inventory**.
+
+| Area | What it does |
+| --- | --- |
+| **Dashboard** | **Customize** which sections show (per login); tap almost any box to open that screen already filtered (e.g. Injection sales → Sales filtered to injections, Unpaid → unpaid appointments, Low stock → low items). Today's OPD, revenue, profit and renewals; *Order required* banner; sales, OPD, patients, leads, team and stock summaries (available stock first); revenue vs expenses by month. Periods: today, this month (updates automatically), any chosen month, last month, year, all time or custom dates. |
+| **Today Summary** | Injection, protein and diet sales in separate boxes (protein has no New / Renewal), sales with the **reference (team member) on every sale**, sales by reference for the whole team, purchases, OPD, expenses, stock available and not available for any day. **Protein and Mounjaro 10mg / 15mg below 2 show “Order required”** (the limit is editable per item). Export as A4 **PDF**, one A4 **JPEG** image or **Excel**, with options: choose the parts to include and filter by sale type, reference and new / renewal patients. Patient details (mobile, age / gender, city) can be added. The default export is the sales list only: patient, product, amount, type (New / Renewal) and reference. |
+| **OPD Appointments** | Clinic visit or online, fee ₹1000 (editable), optional **treatment / service**, patient age / gender and vitals (weight, height, BMI calculated, BP, pulse, sugar), day view and filtered list, complete / paid / no-show / cancel, WhatsApp confirmation, **doctor** and **clinic / branch** for every appointment (add, rename, delete in Settings → Doctors & clinics), **OPD slip PDF** (token and slip number, clinic address and phone, vitals with automatic **BMI**, patient details and visit number, doctor, clinic, treatment, payment, vitals, Rx space, next visit and signature). |
+| **Leads (CRM)** | Name, mobiles, age, gender, city, source, interest, priority (hot / warm / cold), stage, assigned person, follow-up date and time, weight / target / height (BMI), budget, notes. Pipeline by stage, due-today and overdue follow-ups, call / WhatsApp, update history (who and when), book an OPD appointment from the lead (converts it), conversion rate, leads per person. |
+| **Filters & exports** | Search and filters on almost every screen (Today, Sales, OPD, Leads, Patients by gender / age / city, Renewals, Products, Inventory, Purchases by vendor / product, Team, Incentives, Salary, Expenses, Activity) with one-tap Clear. Every PDF / image / Excel export opens options: format, a different period for that file, summary boxes on or off; the file follows the screen's filters. |
+| **Invoices (non-GST)** | Purchase invoices name the item "Weight Loss Program" (or "Weight Loss Program (3 Months)"; months on the sale or in the invoice options; name editable) instead of the product. **Share on WhatsApp**: invoices and OPD slips open in the patient's WhatsApp chat with the PDF attached (Android), or the phone's share sheet / WhatsApp link (browser). Premium A4 invoice for every patient purchase (Sales list and Today) and every OPD consultation (appointment sheet): number per financial year (HV/INV/26-27/0001, HV/OPD/26-27/0001; prefix editable), clinic and patient details, items, total, amount in words, paid / due and payment method, terms & legal notes, "computer-generated, no signature required". Reports, images and OPD slips print the note set in Settings → Clinic & doctors. |
+| **Sign-in records** | Every sign-in, sign-out, wrong PIN and auto-lock is saved in the activity log (and the Google Sheet) with the device; Activity → "Sign-ins & security" filter and last sign-in per person. |
+| **WhatsApp leads (MyOperator / Heyo)** | Log in to MyOperator **inside the app** — no webhook, no export file. Settings → WhatsApp → **Open MyOperator & read chats** opens your panel (`in.app.myoperator.com/chat`) in a logged-in WebView; the app reads the chat names and numbers straight off the screen (and the panel's live fetch/XHR/WebSocket JSON), auto-scrolls to load more, and makes a lead for each number. **Every chat becomes a lead** by default (the old "Hello! Can I get more info on this?" filter is off; re-add a phrase in the box to filter). Even when the list shows only contact names, the app reads the number behind each name (from the chat's link or data attribute). Numbers already a lead or patient are skipped. Whoever a chat is assigned to on MyOperator becomes the lead's *Assigned to* after you match each MyOperator person to a staff login once (unknown people are listed for matching). Set your own WhatsApp number(s) so sent messages aren't counted as new leads. The app makes no request of its own and never sees the password — it reads only what the panel shows on screen. The WhatsApp screen lists these chats with unread counts, chat view and Reply on WhatsApp. |
+| **Follow-up reminders** | Bell in the top bar with the number due; reminder list (overdue and today's follow-ups, OPD waiting, order required, renewals) shown once a day at sign-in; pop-up when a follow-up time arrives; on Android a phone notification at the follow-up time even when the app is closed; snooze (+1 h, 15 min, tomorrow). Front Desk get their own follow-ups; others choose all or only theirs (account menu). Leads have a **Follow-ups** tab (overdue / today / tomorrow / this week / later) and one-tap times (in 1 hour, today 6 PM, tomorrow 11 AM, in 3 days, next week). |
+| **Look & feel** | Seven colour themes (Royal Blue, Black & Gold, Rose Gold, Emerald, Royal Purple, Sunset, dark Midnight) with the Plus Jakarta Sans font chosen per device from the side menu or account menu; side menu with profile, search and quick + Sale / + OPD / + Lead; animated menus and cards; screens behave like an app (text is not selectable, inputs still are). |
+| **Sales** | Injection, protein and diet support, with the patient's age, gender and city (filled in automatically for known patients). Incentive per unit: person + product amount → product amount → person's own rate → default (₹1000 per injection, ₹500 per protein sale); set them all in Incentives → **Product-wise incentive**, split single / 50-50 / custom %. Every injection pen also takes its **kit** out of stock: travel bag 1, ice gel 1, alcohol swabs 16, needles 2 (editable, can be switched off). |
+| **Patients** | Search, active / inactive, visits and spend; edit or delete a patient (with their sales and appointments). |
+| **Stock** | Products, inventory with kit usage, per-item low-stock alert on/off (or all alerts off), “order required” limits, purchases, custom categories. |
+| **Team & money** | Per-person incentive rates and **pay counts** (salary + incentive, salary only or incentive only), personal logins, salary sheet, incentives, expenses. |
+| **Reports** | Overview, Today, OPD, Leads, Sales, Team, Financial, Stock, Purchases, Expenses, Renewals, Activity, each with its own filters; PDF / Excel for every report, or all reports in one file. |
+| **Activity log** | Every change with who made it and when, per-person summary, export. **What's new** lists all versions. |
+| **Choice lists** | Expense categories, services, lead sources and stages, payment methods, designations and inventory categories: “+ Add new…” in any drop-down, rename or remove in Settings. |
+
+Developed by **Aamir Sk · Hindivine Digital Marketing Team**.
+
+**Google Sheet data storage:** all data is stored in the [Hindivine Google Sheet](https://docs.google.com/spreadsheets/d/1_aKPoHJaJfQ6awuoG7ihufQzOBhw8I84yipErlWO1_Y/edit). Set-up once: open the sheet → Extensions → Apps Script → paste [`admin/google-apps-script/Code.gs`](admin/google-apps-script/Code.gs) → run `setup` (creates Dashboard, Appointments, Leads, Patients, Injection Sales, Protein Sales, Diet Support, Purchases, Inventory, Team, Incentives, Salary, Expenses, Renewals, Activity Log, plus a hidden `_AppData` sheet, and logs a secret) → Deploy → Web app (Execute as *Me*, access *Anyone*) → paste the URL and secret on the sign-in screen (*Connect Google Sheet*) or in Settings. The app saves each change within seconds without showing it, refreshes the data every 30 seconds and on pull-down or the refresh button, works offline, and, when two devices changed data at the same time, joins both automatically (newest version of each record wins, deletions stay deleted). Enter data in the app, not in the sheet: every save rewrites the tabs. **Current sheet or a new one:** by default the data stays in the current Hindivine sheet; run `useNewSpreadsheet` in Apps Script to copy all data into a brand-new spreadsheet and use it from now on, or `useCurrentSheet` to go back (missing tabs are created automatically, and Settings shows which spreadsheet is in use). After changing Code.gs: Deploy → Manage deployments → New version.
+
+**Leads in a separate spreadsheet:** Settings → Google Sheet → *Leads spreadsheet* → **Create new leads sheet** (makes "Hindivine Leads"), **Connect this sheet** (paste the link of a sheet the Apps Script account can open) or **Use main sheet**. The Leads and WhatsApp tabs are then written there; the main sheet's Leads tab points to it. The app's shared data stays in the main sheet's hidden `_AppData`.
+
+**Built-in sheet link (clinic APK):** to make the app connect by itself on first launch, put the web app link and secret in `android/sheet.env` (ignored by git) as `HDV_SHEET_URL=…` and `HDV_SHEET_SECRET=…`, then build with `SHEET_ENV=android/sheet.env OUT=/somewhere/HindivineAdmin-clinic.apk APP=admin ./android/build.sh`. Install that APK on clinic phones and **never commit it**: this repository is public and the secret gives full access to the data. The APK in `dist/` has no link; it asks for it on first launch. Settings → Google Sheet can test, sync, disconnect, reconnect or change the link.
+
+**Excel / Google Sheets workbook:** [`admin/Hindivine_Admin_Sheets.xlsx`](admin/Hindivine_Admin_Sheets.xlsx) has the same 13 sheets plus Settings, with formulas, so it also works on its own: appointments (₹1000 fee, clinic visit/online), sales, purchases, expenses, patients and team; stock, incentives, salary + incentive, renewals (75/90 days) and the dashboard calculate themselves. Keep it separate from the Google Sheet the app stores its data in, because the app rewrites those tabs.
+
 ## Apps
 
 | Platform | How |
@@ -67,6 +112,7 @@ In Xcode, choose your Apple Developer team under *Signing & Capabilities*, then 
 
 ```sh
 VERSION_CODE=5 VERSION_NAME=5.0 ./android/build.sh    # needs Java 11+, curl, zip/unzip
+APP=admin VERSION_CODE=19 VERSION_NAME=4.0.1 ./android/build.sh   # Hindivine Admin → dist/HindivineAdmin.apk
 ```
 
 The script doesn't use the Android SDK or Gradle. It downloads `aapt2` (bundled in apktool), `dx`, `apksig` and the Android API jar from Maven Central into `android/.tools/`, then compiles, dexes and signs the app.
@@ -99,8 +145,9 @@ npm test             # Node 18+, no dependencies
 | `ios-app/` | Capacitor iOS project (Xcode) |
 | `img/` | Hindivine logo and icons |
 | `android/` | Android WebView wrapper and build script |
-| `dist/HindivineDiet.apk` | Built Android app |
-| `tests/` | Unit tests (planner, recipes, storage, PDF read-back) |
+| `dist/HindivineDiet.apk`, `dist/HindivineAdmin.apk` | Built Android apps |
+| `admin/` | Hindivine Admin app: `js/core.js` (data and rules), `js/app.js` (screens), `js/export.js` (PDF / Excel), `vendor/` (jsPDF, AutoTable, SheetJS), `google-apps-script/Code.gs` (Sheets) |
+| `tests/` | Unit tests (planner, recipes, storage, PDF read-back, admin app) |
 
 ## Disclaimer
 

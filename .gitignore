@@ -6,3 +6,5 @@ android/*.p12
 android/*.jks
 ios-app/node_modules/
 ios-app/www/
+android/build-admin/
+android/sheet.env
