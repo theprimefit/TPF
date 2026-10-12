@@ -2,6 +2,7 @@
 // The lead agent: handles every inbound WhatsApp message end to end
 // (capture → understand → reply → score → alert) and runs follow-ups.
 const { scoreLead, nextStage } = require('./scoring');
+const { redFlag } = require('./brain');
 
 const OPT_OUT = /^\s*(stop|unsubscribe|band karo|cancel)\s*$/i;
 const OPT_IN = /^\s*(start|subscribe)\s*$/i;
@@ -11,7 +12,7 @@ const HOUR = 3600000;
 // Follow-up cadence after the lead goes quiet (measured from their last message).
 const FOLLOWUPS = [
   { after: 2 * HOUR, text: (l) => `Hi${first(l)}, just checking, did you get a chance to look at this? Happy to answer any question 🙂` },
-  { after: 5 * HOUR, text: (l, biz) => `${l.profile?.goal ? `Many of our ${l.profile.goal.toLowerCase()} clients started with a free 15-min call.` : 'Most clients start with a free 15-min call.'} Want me to book one for you${first(l)}? ${biz.bookingLink}` },
+  { after: 5 * HOUR, text: (l, biz) => `${biz.offer ? `${biz.offer} ` : ''}Want me to book your doctor consultation${first(l)}? Call ${biz.phone} or book at ${biz.bookingLink}` },
   { after: 3 * DAY, template: true },
   { after: 7 * DAY, template: true },
 ];
@@ -67,7 +68,9 @@ function createAgent({ store, wa, brain, fallbackBrain, business, alertNumbers =
     for (const n of alertNumbers) await wa.sendText(n, text).catch((e) => log.error('alert failed', e.message));
   }
 
-  async function decide(lead) {
+  async function decide(lead, text) {
+    // Medical red flags always go to the doctor with a fixed safe reply, whatever the AI would say.
+    if (fallbackBrain && redFlag(text)) return fallbackBrain(lead);
     try {
       const d = await brain(lead);
       if (d && d.reply) return d;
@@ -102,7 +105,7 @@ function createAgent({ store, wa, brain, fallbackBrain, business, alertNumbers =
       return store.save();
     }
 
-    const decision = await decide(lead);
+    const decision = await decide(lead, msg.text);
     lead = store.getLead(msg.from);
 
     // If the lead sent more messages while we were thinking, let the next run answer them together.
@@ -122,7 +125,7 @@ function createAgent({ store, wa, brain, fallbackBrain, business, alertNumbers =
     }
 
     const becameHot = rescore(lead);
-    if (decision?.action === 'handoff') await alertTeam(lead, `Needs a human (${lead.handoffReason})`);
+    if (decision?.action === 'handoff') await alertTeam(store.getLead(msg.from), `Needs a human (${store.getLead(msg.from).handoffReason})`);
     else if (decision?.action === 'book_call') await alertTeam(lead, 'Consultation link sent');
     else if (becameHot) await alertTeam(lead, 'Hot lead');
     return store.save();

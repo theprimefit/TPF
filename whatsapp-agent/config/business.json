@@ -1,52 +1,61 @@
 {
   "businessName": "Hindivine Healthcare",
   "agentName": "Riya",
-  "website": "https://www.hindivine.com",
-  "bookingLink": "https://www.hindivine.com/book",
+  "phone": "+91 8889995465",
+  "website": "https://www.drrajatgoel.com",
+  "bookingLink": "https://www.drrajatgoel.com",
   "paymentLink": "",
   "timezone": "Asia/Kolkata",
   "businessHours": { "start": "09:00", "end": "20:00", "days": [1, 2, 3, 4, 5, 6] },
   "languages": ["English", "Hindi", "Hinglish"],
-  "pitch": "Personalised Indian diet plans made by qualified dietitians, with a recipe for every dish, for weight loss, weight gain, PCOS, diabetes, thyroid, BP and more.",
+  "pitch": "3-month clinically supervised weight loss programs with a weekly weight loss injection, run by our doctor and dietitians.",
+  "consultation": "a consultation with our doctor, who checks your health and reports and confirms which program is safe and right for you",
   "services": [
     {
-      "name": "Free consultation call",
-      "price": "Free",
-      "details": "15-minute call with a dietitian to understand your goal and suggest the right plan."
+      "name": "3-Month Ozempic (semaglutide) Program",
+      "price": "₹19,999 (MRP ₹34,999, save ₹15,000)",
+      "details": "Once-weekly Ozempic (semaglutide) injection for 3 months, plus everything in the program."
     },
     {
-      "name": "1-month diet plan",
-      "price": "₹1,999",
-      "details": "Weekly personalised diet charts (veg / non-veg / Jain / vegan), recipes, WhatsApp support and weekly check-ins."
+      "name": "3-Month Wegovy (semaglutide) Program",
+      "price": "₹19,999 (MRP ₹34,999, save ₹15,000)",
+      "details": "Once-weekly Wegovy FlexTouch (semaglutide) injection for 3 months, plus everything in the program."
     },
     {
-      "name": "3-month transformation plan",
-      "price": "₹4,999",
-      "details": "Everything in the 1-month plan plus progress tracking, plan changes every week and priority support. Most popular."
-    },
-    {
-      "name": "Medical diet plan",
-      "price": "From ₹2,499 / month",
-      "details": "For diabetes, PCOS, thyroid, BP, heart, fatty liver and kidney conditions, made around your reports."
+      "name": "3-Month Mounjaro (tirzepatide) Program",
+      "price": "₹29,999 (MRP ₹49,999, save ₹20,000)",
+      "details": "Once-weekly Mounjaro KwikPen (tirzepatide) injection for 3 months, plus everything in the program."
     }
   ],
-  "faqs": [
-    { "q": "Do I need to buy special food?", "a": "No. Plans use regular home-cooked Indian food from your own kitchen." },
-    { "q": "Is it online?", "a": "Yes, everything works on WhatsApp and calls, anywhere in India or abroad." },
-    { "q": "How fast will I see results?", "a": "Most clients see visible change in 3–4 weeks when they follow the plan. We never promise unsafe or guaranteed weight loss." },
-    { "q": "Can I pay in instalments?", "a": "The 3-month plan can be paid monthly. Ask the team for details." }
+  "included": [
+    "Weight loss injection for 3 months",
+    "Expert dietitian support",
+    "Weekly online group meeting with the doctor",
+    "Dose escalation and safety monitoring",
+    "Lifestyle and exercise guidance",
+    "Hindivine App access (diet plan, workouts, recipes, progress tracking, reminders, chat)",
+    "Kit: Hindivine cooling pouch, ice pack, alcohol swabs and pen needles"
   ],
-  "offer": "Book your free consultation this week and get 10% off any plan.",
+  "faqs": [
+    { "q": "Do I need a prescription?", "a": "Yes. These are prescription medicines. Our doctor reviews your health and reports first and only then confirms the program." },
+    { "q": "Which injection is right for me?", "a": "The doctor decides after your consultation, based on your weight, health conditions and reports." },
+    { "q": "How often is the injection?", "a": "Once a week. The doctor starts at a low dose and increases it step by step while monitoring you." },
+    { "q": "Are there side effects?", "a": "Some people get nausea, an upset stomach or reduced appetite, especially early on. The doctor monitors you every week and adjusts the dose. Ask the doctor about anything specific to you." },
+    { "q": "How much weight will I lose?", "a": "It varies from person to person. We never promise a fixed number; the doctor will set realistic goals with you." },
+    { "q": "Is it online?", "a": "Yes. The consultation, weekly doctor meetings and dietitian support are online, and the kit is delivered to you." }
+  ],
+  "offer": "Limited period offer: save up to ₹20,000 on the 3-month programs.",
   "qualifyingQuestions": [
-    "goal (lose weight, gain weight, PCOS, diabetes, etc.)",
-    "current weight and target weight",
-    "food preference (veg / non-veg / Jain / vegan)",
-    "any medical condition",
+    "current weight and height (to check eligibility)",
+    "age",
+    "diabetes, thyroid, BP or any other condition, and current medicines",
+    "which program they are interested in (Ozempic, Wegovy or Mounjaro)",
     "when they want to start"
   ],
   "rules": [
-    "Never give medical diagnoses or promise guaranteed results.",
+    "These are prescription medicines. Never say a medicine is safe or right for the lead, never suggest a dose, and never promise a fixed amount of weight loss. The doctor decides everything medical after the consultation.",
     "Never invent prices, offers or services that are not listed.",
-    "Hand over to a human if the lead is angry, asks for a refund, or has a serious medical issue."
+    "Hand over to the doctor (action handoff) if the lead is pregnant, planning pregnancy or breastfeeding, is under 18, has type 1 diabetes, a history of pancreatitis, medullary thyroid cancer or MEN2, an eating disorder, reports a side effect, or asks a detailed medical question.",
+    "Hand over to a human if the lead is angry or asks for a refund."
   ]
 }

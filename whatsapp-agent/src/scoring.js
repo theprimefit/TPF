@@ -1,12 +1,12 @@
 'use strict';
 // Lead scoring (0–100) and automatic pipeline stage changes.
 
-const BUY_SIGNALS = /\b(join|start|enrol+|enroll|book|buy|pay|payment|sign ?up|register|interested|ready|lets do|let's do|kab start|shuru|lena hai|chahiye)\b/i;
-const PRICE_SIGNALS = /\b(price|pricing|cost|fee|fees|charges?|kitna|kitne|rate|plans?|package|₹|rs\.?|rupees?)\b/i;
+const BUY_SIGNALS = /\b(consult\w*|join|start|enrol+|enroll|book|buy|pay|payment|sign ?up|register|interested|ready|lets do|let's do|kab start|shuru|lena hai|chahiye)\b/i;
+const PRICE_SIGNALS = /\b(ozempic|wegovy|mounjaro|price|pricing|cost|fee|fees|charges?|kitna|kitne|rate|plans?|package|₹|rs\.?|rupees?)\b/i;
 const URGENCY = /\b(today|now|asap|urgent|immediately|tomorrow|this week|aaj|abhi|kal)\b/i;
 const NEGATIVE = /\b(not interested|no thanks|expensive|too costly|mehenga|later|baad mein|just checking|stop)\b/i;
 
-const PROFILE_POINTS = { goal: 10, currentWeight: 4, targetWeight: 4, diet: 4, condition: 4, startWhen: 6, city: 2, age: 2 };
+const PROFILE_POINTS = { goal: 4, currentWeight: 6, height: 6, age: 3, condition: 3, preferredProgram: 8, startWhen: 6, city: 2 };
 const INTENT_POINTS = { high: 25, medium: 10, low: 0 };
 const STAGE_POINTS = { new: 0, engaged: 5, qualified: 15, booked: 30, won: 40, lost: -40 };
 
@@ -57,7 +57,8 @@ function scoreLead(lead, now = Date.now()) {
 function nextStage(lead) {
   if (['booked', 'won', 'lost'].includes(lead.stage)) return lead.stage;
   const p = lead.profile || {};
-  const qualified = p.goal && (p.currentWeight || p.condition || p.diet) && (p.startWhen || p.intent === 'high');
+  // Qualified = we know enough for the doctor to judge eligibility, or they want to buy.
+  const qualified = (p.currentWeight && p.height && (p.age || p.condition)) || (p.currentWeight && p.intent === 'high');
   if (qualified) return 'qualified';
   const inbound = lead.messages.filter((m) => m.dir === 'in').length;
   if (lead.stage === 'new' && inbound >= 2) return 'engaged';

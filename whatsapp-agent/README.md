@@ -1,6 +1,6 @@
 # WhatsApp Lead Agent
 
-An all-in-one WhatsApp sales agent for **Hindivine Healthcare**. It answers every lead instantly, qualifies them, recommends a plan, books a free consultation, follows up with leads who go quiet, and alerts the team when a lead is hot. Everything is tracked in a small CRM dashboard.
+An all-in-one WhatsApp sales agent for **Hindivine Healthcare's 3-month weight loss programs** (Ozempic ₹19,999 · Wegovy ₹19,999 · Mounjaro ₹29,999). It answers every lead instantly, checks eligibility details, quotes the programs, books the doctor consultation, follows up with leads who go quiet, and alerts the team when a lead is hot. Everything is tracked in a small CRM dashboard.
 
 ![Dashboard](docs/dashboard.png)
 
@@ -9,8 +9,9 @@ An all-in-one WhatsApp sales agent for **Hindivine Healthcare**. It answers ever
 | | |
 | --- | --- |
 | **Instant auto-reply, 24×7** | Every WhatsApp message gets a reply in seconds, in English, Hindi or Hinglish. Claude writes the replies; without an API key a built-in rule-based sales flow runs instead (and takes over automatically if Claude is ever unavailable). |
-| **Qualifies like a salesperson** | Asks one question at a time: goal, current/target weight, food preference, medical condition, start date. Uses quick-reply buttons so leads answer with one tap. |
-| **Converts** | Recommends the best-fitting plan from `config/business.json`, handles price, time and trust objections, mentions the current offer, and sends the booking link as soon as the lead shows buying intent. It never invents prices or promises results. |
+| **Qualifies like a salesperson** | Asks one question at a time: weight and height, age, conditions and medicines, preferred program, start date. Uses quick-reply buttons so leads answer with one tap. |
+| **Converts** | Quotes the three programs and what the kit includes from `config/business.json`, handles price, injection-fear and trust objections, mentions the offer, and sends the phone number and booking link as soon as the lead shows buying intent. It never invents prices or promises results. |
+| **Medical safety** | These are prescription medicines, so the agent never picks a medicine, suggests a dose or says it is safe for someone: the doctor decides after the consultation. Pregnancy or breastfeeding, under 18, type 1 diabetes, pancreatitis, thyroid cancer/MEN2, eating disorders and reported side effects are caught by a fixed check (not the AI), which hands the chat to the doctor and alerts the team. |
 | **Lead capture & source tracking** | Every number becomes a lead with name, profile, AI summary and full chat. Click-to-WhatsApp ad clicks are tagged with the ad headline. |
 | **Lead scoring (0–100)** | Hot / warm / cold, from profile completeness, buying and price words, urgency, AI-judged intent, stage, ad source and silence. The dashboard shows why each lead got its score. |
 | **Pipeline** | New → Engaged → Qualified → Booked → Won / Lost. Stages move forward automatically; change them by hand at any time. |
@@ -45,7 +46,7 @@ Without `WHATSAPP_TOKEN` the agent runs in dry-run mode and only logs the messag
 
 WhatsApp only allows approved templates more than 24 hours after a lead's last message. In WhatsApp Manager, create a *Marketing* template named `lead_followup` with one variable, for example:
 
-> Hi {{1}}, this is Riya from Hindivine Healthcare 🌿 Your free diet consultation is still available. Reply YES and we'll book a time that suits you.
+> Hi {{1}}, this is Riya from Hindivine Healthcare 🌿 Your doctor consultation for our 3-month weight loss program is still available. Reply YES and we'll book a time that suits you.
 
 Set `FOLLOWUP_TEMPLATE_NAME` / `FOLLOWUP_TEMPLATE_LANG` to match. Leave the name blank to skip template follow-ups.
 
@@ -55,7 +56,7 @@ Set `ANTHROPIC_API_KEY`. The default model is `claude-opus-5-5` at `CLAUDE_EFFOR
 
 ### 4. Your business details
 
-Edit `config/business.json`: agent name, services and prices, offer, FAQs, booking/payment links, business hours, languages and rules. Both Claude and the rule-based flow read it, so you never have to touch the code to change what the agent says.
+Edit `config/business.json`: agent name, phone, programs and prices, what's included, offer, FAQs, booking/payment links, business hours, languages and rules. Both Claude and the rule-based flow read it, so you never have to touch the code to change what the agent says.
 
 ### 5. Team alerts
 
@@ -90,7 +91,7 @@ npm test      # no network or API key needed
 | --- | --- |
 | `src/server.js` | HTTP server: webhook, dashboard, API, follow-up timer |
 | `src/agent.js` | Handles each message end to end: capture, opt-out, handoff, reply, score, alerts, follow-ups |
-| `src/brain.js` | Claude replies (structured output) and the rule-based fallback |
+| `src/brain.js` | Claude replies (structured output), the rule-based fallback and the medical red-flag check |
 | `src/scoring.js` | Lead score, temperature and automatic stage changes |
 | `src/whatsapp.js` | WhatsApp Cloud API client, signature check, webhook parsing |
 | `src/store.js` | JSON-file lead store |

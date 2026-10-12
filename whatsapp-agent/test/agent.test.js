@@ -6,7 +6,7 @@ const http = require('node:http');
 const business = require('../config/business.json');
 const { createStore } = require('../src/store');
 const { parseWebhook, verifySignature } = require('../src/whatsapp');
-const { createRuleBrain, createClaudeBrain, toTurns } = require('../src/brain');
+const { createRuleBrain, createClaudeBrain, toTurns, redFlag } = require('../src/brain');
 const { createAgent, inBusinessHours } = require('../src/agent');
 const { scoreLead } = require('../src/scoring');
 const { createApp } = require('../src/server');
@@ -63,33 +63,57 @@ test('verifies Meta webhook signatures', () => {
   assert.ok(!verifySignature(body, undefined, 'secret'));
 });
 
-test('rule-based flow qualifies a lead, books a call and alerts the team', async () => {
+test('rule-based flow qualifies a lead, quotes the 3 programs and books a consultation', async () => {
   const { store, wa, say } = setup();
-  await say('Hi, saw your ad', { referral: { source: 'ad', detail: 'Lose 5 kg in 30 days' } });
+  await say('Hi, saw your ad', { referral: { source: 'ad', detail: 'Mounjaro weight loss program' } });
   let lead = store.getLead('919800000001');
   assert.equal(lead.source, 'ad');
   assert.equal(lead.stage, 'new');
-  assert.equal(toLead(wa)[0].type, 'buttons');
   assert.match(toLead(wa)[0].text, /Priya/);
+  assert.match(toLead(wa)[0].text, /weight and height/i);
 
-  await say('Weight loss');
-  assert.match(toLead(wa).at(-1).text, /current weight/i);
-  await say('82 kg, want 68');
-  assert.match(toLead(wa).at(-1).text, /veg/i);
-  await say('veg, starting this week');
+  await say('price kitna hai?');
+  const quote = toLead(wa).at(-1).text;
+  for (const s of business.services) assert.ok(quote.includes(s.price), `quotes ${s.name}`);
+  assert.equal((quote.match(/•/g) || []).length, 3, 'exactly 3 programs');
+  assert.match(quote, /doctor confirms/i);
+
+  await say("I'm 92 kg, 5 ft 4");
+  assert.match(toLead(wa).at(-1).text, /age/i);
+  await say('34 years, I have thyroid');
   lead = store.getLead('919800000001');
-  assert.equal(lead.profile.goal, 'Weight loss');
-  assert.equal(lead.profile.currentWeight, '82 kg');
-  assert.equal(lead.profile.diet, 'Veg');
-  assert.match(toLead(wa).at(-1).text, /3-month/);
+  assert.deepEqual(
+    [lead.profile.currentWeight, lead.profile.height, lead.profile.age, lead.profile.condition, lead.profile.preferredProgram],
+    ['92 kg', '5 ft 4 in', '34', 'Thyroid', 'Mounjaro'],
+  );
+  assert.equal(lead.stage, 'qualified');
 
   await say('ok I want to book');
   lead = store.getLead('919800000001');
   assert.equal(lead.stage, 'booked');
+  assert.ok(toLead(wa).at(-1).text.includes(business.phone));
   assert.ok(toLead(wa).at(-1).text.includes(business.bookingLink));
   assert.equal(lead.temperature, 'hot');
   assert.ok(wa.sent.some((m) => m.to === '919999999999' && /Priya/.test(m.text)), 'team alert sent');
-  assert.equal(lead.messages.length, 10);
+});
+
+test('medical red flags go to the doctor even when Claude would keep selling', async () => {
+  const brain = async () => ({ reply: 'Great, Mounjaro is perfect for you!', buttons: [], profile: {}, intent: 'high', action: 'book_call', handoffReason: '', summary: '' });
+  const { store, wa, say } = setup({ brain });
+  await say('I am pregnant, can I take Mounjaro?');
+  const lead = store.getLead('919800000001');
+  assert.ok(lead.botPaused);
+  assert.match(lead.handoffReason, /pregnancy/);
+  assert.doesNotMatch(toLead(wa)[0].text, /perfect/);
+  assert.match(toLead(wa)[0].text, /doctor/);
+  assert.ok(wa.sent.some((m) => m.to === '919999999999' && /pregnancy/.test(m.text)));
+});
+
+test('red-flag screen', () => {
+  for (const t of ['I am pregnant', 'I have type 1 diabetes', 'had pancreatitis', 'I am 16', 'I am getting nausea after the dose'])
+    assert.ok(redFlag(t), t);
+  for (const t of ['what are the side effects?', 'I am 170 cm', 'I am 15 kg overweight', 'I have type 2 diabetes', 'is ozempic safe?'])
+    assert.equal(redFlag(t), '', t);
 });
 
 test('ignores duplicate webhook deliveries', async () => {
@@ -145,7 +169,7 @@ test('Claude brain sends a structured request and its decision is applied', asyn
   };
   const brain = createClaudeBrain({ business, client });
   const { store, wa, say } = setup({ brain });
-  await say('I have PCOS, 74kg, veg, from Pune. How do I join?');
+  await say('I have PCOS, 74kg, 5ft 3, from Pune. How do I join?');
 
   assert.equal(request.model, 'claude-opus-5-5');
   assert.equal(request.output_config.format.type, 'json_schema');
@@ -165,7 +189,7 @@ test('falls back to rules when Claude fails', async () => {
   const brain = async () => { throw new Error('overloaded'); };
   const { wa, say } = setup({ brain });
   await say('price?');
-  assert.match(toLead(wa)[0].text, /₹/);
+  assert.match(toLead(wa)[0].text, /₹19,999/);
 });
 
 test('conversation history becomes alternating turns starting with the lead', () => {
