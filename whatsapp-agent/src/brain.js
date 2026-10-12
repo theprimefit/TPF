@@ -190,7 +190,8 @@ const ASK = {
   doctor: /\b(doctor|dr\.?|who (is|are) (the )?(doctor|you)|qualified|rajat)\b/i,
 };
 
-function createRuleBrain({ business }) {
+// hasQr: whether a UPI QR image is sent with the payment details.
+function createRuleBrain({ business, hasQr = true }) {
   const first = (name) => (name ? ` ${name.split(' ')[0]}` : '');
   const doc = business.doctor ? business.doctor.name : 'our doctor';
   const fee = business.consultationFee;
@@ -243,12 +244,12 @@ function createRuleBrain({ business }) {
       out.intent = 'high';
       if (paymentAsked) {
         out.reply = pay
-          ? `Sure${n}! Please pay ${fee} to UPI ID ${pay.upiId} (or scan the QR above) and send the payment screenshot here. Our team will then confirm your slot.`
+          ? `Sure${n}! Please pay ${fee} to UPI ID ${pay.upiId} ${hasQr ? '(or scan the QR above) ' : ''}and send the payment screenshot here. Our team will then confirm your slot.`
           : `Sure${n}! Our team will share the payment details shortly.`;
         return;
       }
       if (pay) {
-        out.reply = `Great${n}! Here's how to book your consultation with ${doc}'s team:\n• Fee: ${fee} (100% adjusted when you join the program)\n• Pay by UPI: ${pay.upiId} (QR code below)\n• Then send the payment screenshot here\n\nWould you like an online consultation or a clinic visit?`;
+        out.reply = `Great${n}! Here's how to book your consultation with ${doc}'s team:\n• Fee: ${fee} (100% adjusted when you join the program)\n• Pay by UPI: ${pay.upiId}${hasQr ? ' (QR code below)' : ''}\n• Then send the payment screenshot here\n\nWould you like an online consultation or a clinic visit?`;
         out.buttons = ['Online consultation', 'Clinic visit'];
         out.action = 'send_payment';
       } else {

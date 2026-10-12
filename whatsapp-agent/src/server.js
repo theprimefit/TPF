@@ -326,7 +326,7 @@ function main() {
     }
     deps.wa = web ? deps.web : createWhatsApp({ token: env.WHATSAPP_TOKEN, phoneNumberId: env.WHATSAPP_PHONE_NUMBER_ID, apiVersion: env.WHATSAPP_API_VERSION || 'v21.0' });
     const qr = findQr(mediaDirs);
-    const rules = createRuleBrain({ business });
+    const rules = createRuleBrain({ business, hasQr: Boolean(qr) && (web || Boolean(hostedUrl(env) || state.tunnelUrl || env.PAYMENT_QR_URL)) });
     const brain = env.ANTHROPIC_API_KEY
       ? createClaudeBrain({ business, apiKey: env.ANTHROPIC_API_KEY, model: env.CLAUDE_MODEL || 'claude-opus-5-5', effort: env.CLAUDE_EFFORT || 'low' })
       : rules;

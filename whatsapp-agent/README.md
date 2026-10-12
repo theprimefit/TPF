@@ -59,7 +59,12 @@ The repo includes a `render.yaml` blueprint. In Render choose **New → Blueprin
 
 **Android app:** install [`dist/HindivineLeads.apk`](dist/HindivineLeads.apk) (Android 7.0+; allow *Install unknown apps* when asked). On first open, enter the agent's address (the public link from the setup page, your Render address, or `http://<computer-ip>:3000` on the office Wi-Fi), then log in with the dashboard password. **Server** in the dashboard header changes the address later. Rebuild with `VERSION_CODE=2 VERSION_NAME=1.1 ./android/build.sh` (needs Java 11+; keep `android/leads-release.p12`, updates must be signed with the same key).
 
-**Chrome extension (computers):** unzip [`dist/HindivineLeads-chrome.zip`](dist/HindivineLeads-chrome.zip), open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and choose the unzipped folder. In the options page that opens, enter the agent address and dashboard password, and allow access when Chrome asks. You get desktop alerts (new leads, payments to verify, chats that need a person, hot leads), a red count on the toolbar icon, a popup with **Mark paid** / **Resume bot**, and on web.whatsapp.com a lead card with quick replies that are typed into the message box for you to check and send. Source: `chrome-extension/`.
+**Chrome extension: the easiest way, with no server, address or password.** The extension runs the whole agent inside WhatsApp Web in Chrome: instant replies, lead scoring, follow-ups, payment checks and desktop alerts, with leads saved in Chrome.
+1. Unzip [`dist/HindivineLeads-chrome.zip`](dist/HindivineLeads-chrome.zip), open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and choose the unzipped folder.
+2. On the welcome page click **Open WhatsApp Web**, log in by scanning its QR with the business phone, and keep that tab open (pin it).
+3. Click the extension's toolbar icon for leads, alerts and the auto-reply switch; **All leads** opens the full list with chats.
+
+It only replies to numbers that aren't saved in the phone (friends and family are left alone; change in Settings), never switches chats while someone is using the tab, and pauses on a chat when a person replies. Chrome must stay open and the computer awake. The UPI ID is sent as text (no QR image). Settings can instead connect the extension to an agent server (address and dashboard password), where it shows alerts and a lead card. After changing `src/` or `config/`, run `node chrome-extension/build.js` and reload the extension.
 
 **iPhone, or without installing:** open `https://<your public link>/dashboard` and choose **Share → Add to Home Screen** (iPhone) or **Install app** (Android Chrome).
 

@@ -120,7 +120,14 @@ function createStore(file) {
     };
   }
 
-  return { getLead, upsertLead, updateLead, addMessage, markProcessed, listLeads, stats, save, STAGES };
+  // Used by the Chrome extension, which keeps the data in chrome.storage instead of a file.
+  const exportData = () => data;
+  const importData = (d) => {
+    if (d && d.leads) data = { leads: d.leads, processed: d.processed || [] };
+  };
+  const isProcessed = (id) => data.processed.includes(id);
+
+  return { getLead, upsertLead, updateLead, addMessage, markProcessed, isProcessed, listLeads, stats, save, exportData, importData, STAGES };
 }
 
 module.exports = { createStore, STAGES };

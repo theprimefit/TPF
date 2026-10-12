@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Welcome to Hindivine Leads</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  main { max-width: 620px; margin: 0 auto; padding: 32px 16px; display: flex; flex-direction: column; gap: 16px; }
+  ol { margin: 0; padding-left: 22px; display: grid; gap: 10px; font-size: 15px; }
+  .big { font-size: 15px; padding: 10px 16px; }
+  ul { margin: 0; padding-left: 20px; display: grid; gap: 4px; color: var(--muted); font-size: 13.5px; }
+</style>
+</head>
+<body>
+<main>
+  <div style="display:flex;gap:12px;align-items:center"><img src="icons/icon-48.png" width="48" height="48" alt=""><div><h1 style="font-size:24px">Hindivine Leads is installed</h1><p class="muted">Your WhatsApp lead agent now runs inside Chrome. No server, address or password needed.</p></div></div>
+  <div class="card" style="display:flex;flex-direction:column;gap:12px">
+    <ol>
+      <li>Open <b>WhatsApp Web</b> and log in by scanning its QR code with the business phone.</li>
+      <li>Keep that tab open (right-click the tab → <b>Pin</b>). The agent replies to new messages there.</li>
+      <li>Click the <b>Hindivine Leads</b> icon in Chrome's toolbar to see leads, alerts and the auto-reply switch. (Pin it from the puzzle-piece menu.)</li>
+    </ol>
+    <div><button class="primary big" id="go">Open WhatsApp Web</button></div>
+  </div>
+  <div class="card" style="display:flex;flex-direction:column;gap:6px">
+    <p style="font-weight:600">Good to know</p>
+    <ul>
+      <li>The agent only answers numbers that aren't saved in your phone, so friends and family don't get bot replies. You can change this in Settings.</li>
+      <li>While you're using the WhatsApp Web tab yourself, the agent only handles the chat you have open and never switches chats on you.</li>
+      <li>If you type a reply yourself, the agent pauses on that chat. Resume it from the popup.</li>
+      <li>Chrome must stay open and the computer awake for replies and follow-ups to go out.</li>
+      <li>Automating WhatsApp Web is unofficial: WhatsApp may restrict numbers it sees as automated. The agent replies only to people who message first, at a human pace.</li>
+    </ul>
+  </div>
+</main>
+<script src="welcome.js"></script>
+</body>
+</html>

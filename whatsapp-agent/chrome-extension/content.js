@@ -5,7 +5,23 @@
   if (window.__hindivineLeads) return;
   window.__hindivineLeads = true;
 
-  const send = (msg) => new Promise((r) => chrome.runtime.sendMessage(msg, (res) => r(res || { ok: false, error: 'Extension reloaded. Refresh WhatsApp Web.' })));
+  const viaBackground = (msg) => new Promise((r) => chrome.runtime.sendMessage(msg, (res) => r(res || { ok: false, error: 'Extension reloaded. Refresh WhatsApp Web.' })));
+  // In standalone mode the agent runs in this page (runner.js), so ask it directly.
+  let standalone = true;
+  chrome.storage.local.get('mode').then(({ mode }) => { standalone = (mode || 'standalone') === 'standalone'; });
+  chrome.storage.onChanged.addListener((c) => { if (c.mode) standalone = (c.mode.newValue || 'standalone') === 'standalone'; });
+  async function send(msg) {
+    const local = standalone && window.__hlAgent;
+    if (!local || msg.type === 'open') return viaBackground(msg);
+    try {
+      if (msg.type === 'lookup') return { ok: true, data: local.lookup(msg.title) };
+      if (msg.type === 'patch') return { ok: true, data: await local.patch(msg.phone, msg.patch) };
+      if (msg.type === 'business') return { ok: true, data: local.business() };
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
+    return { ok: false, error: 'Unknown request' };
+  }
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   const host = document.createElement('div');
@@ -85,6 +101,8 @@
   }
 
   function render(message) {
+    // In standalone mode, personal chats (not leads) get no card.
+    if (standalone && !lead && !message) { wrap.hidden = true; return; }
     wrap.hidden = false;
     const pill = root.getElementById('pill');
     if (!lead) {

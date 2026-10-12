@@ -1,31 +1,44 @@
-// Polls the agent every minute: desktop alerts for new and urgent leads, and a
-// badge with how many need someone right now. Also answers the WhatsApp Web card.
+// Background worker: desktop alerts, the toolbar count, and opening leads.
+// Standalone mode: the agent runs in the WhatsApp Web tab and sends alerts here.
+// Server mode: polls the agent server every minute.
 importScripts('lib.js');
 
 const POLL_MINUTES = 1;
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(({ reason }) => {
   chrome.alarms.create('poll', { periodInMinutes: POLL_MINUTES });
-  chrome.runtime.openOptionsPage();
+  if (reason === 'install') chrome.tabs.create({ url: 'welcome.html' });
 });
 chrome.runtime.onStartup.addListener(() => chrome.alarms.create('poll', { periodInMinutes: POLL_MINUTES }));
 chrome.alarms.onAlarm.addListener((a) => a.name === 'poll' && poll());
+chrome.storage.onChanged.addListener((c) => { if (c.agentUpdated || c.mode) badge(); });
+
+function setBadge(count, note) {
+  chrome.action.setBadgeText({ text: note ? '!' : count ? String(count) : '' });
+  chrome.action.setBadgeBackgroundColor({ color: note ? '#9aa2c0' : '#d23a2a' });
+  chrome.action.setTitle({ title: note ? `Hindivine Leads: ${note}` : count ? `Hindivine Leads: ${count} need attention` : 'Hindivine Leads' });
+}
+
+async function badge() {
+  if ((await HL.mode()) !== 'standalone') return;
+  const s = HL.localStats(await HL.localLeads());
+  setBadge(s.toVerify + s.needsHuman);
+}
+
+function notify(phone, title, message) {
+  chrome.notifications.create(`lead:${phone || ''}:${Date.now()}`, { type: 'basic', iconUrl: 'icons/icon-128.png', title, message: String(message || '').slice(0, 180), priority: 2 });
+}
 
 async function poll() {
+  if ((await HL.mode()) === 'standalone') return badge();
   const { server } = await HL.config();
   if (!server) return;
   let leads;
   try {
     leads = await HL.api('/api/leads');
   } catch (e) {
-    chrome.action.setBadgeText({ text: '!' });
-    chrome.action.setBadgeBackgroundColor({ color: '#9aa2c0' });
-    chrome.action.setTitle({ title: `Hindivine Leads: ${e.message}` });
-    return;
+    return setBadge(0, e.message);
   }
-  const urgent = leads.filter((l) => l.paymentStatus === 'to_verify' || (l.botPaused && !l.optedOut)).length;
-  chrome.action.setBadgeText({ text: urgent ? String(urgent) : '' });
-  chrome.action.setBadgeBackgroundColor({ color: '#d23a2a' });
-  chrome.action.setTitle({ title: urgent ? `Hindivine Leads: ${urgent} need attention` : 'Hindivine Leads' });
+  setBadge(leads.filter((l) => l.paymentStatus === 'to_verify' || (l.botPaused && !l.optedOut)).length);
 
   const { seen } = await chrome.storage.local.get('seen');
   const next = {};
@@ -41,25 +54,33 @@ async function poll() {
     else if (l.temperature === 'hot' && before.t !== 'hot') alerts.push([l.phone, `Hot lead: ${who}`, l.summary || `Score ${l.score}`]);
   }
   await chrome.storage.local.set({ seen: next });
-  for (const [phone, title, message] of alerts.slice(0, 4)) {
-    chrome.notifications.create(`lead:${phone}:${Date.now()}`, { type: 'basic', iconUrl: 'icons/icon-128.png', title, message: String(message).slice(0, 180), priority: 2 });
-  }
-  if (alerts.length > 4) {
-    chrome.notifications.create(`more:${Date.now()}`, { type: 'basic', iconUrl: 'icons/icon-128.png', title: `${alerts.length - 4} more lead updates`, message: 'Open the dashboard to see them.' });
-  }
+  for (const [phone, title, message] of alerts.slice(0, 4)) notify(phone, title, message);
+  if (alerts.length > 4) notify('', `${alerts.length - 4} more lead updates`, 'Open the dashboard to see them.');
 }
 
-chrome.notifications.onClicked.addListener(async (id) => {
+async function openLead(phone) {
+  if ((await HL.mode()) === 'standalone') return chrome.tabs.create({ url: `leads.html${phone ? `#${phone}` : ''}` });
   const { server } = await HL.config();
-  const phone = id.startsWith('lead:') ? id.split(':')[1] : '';
-  chrome.tabs.create({ url: `${server}/dashboard${phone ? `#lead=${phone}` : ''}` });
+  return chrome.tabs.create({ url: `${server}/dashboard${phone ? `#lead=${phone}` : ''}` });
+}
+
+chrome.notifications.onClicked.addListener((id) => {
+  openLead(id.startsWith('lead:') ? id.split(':')[1] : '');
   chrome.notifications.clear(id);
 });
 
-// Requests from the popup and the WhatsApp Web card (content scripts can't call the agent directly).
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
   (async () => {
     if (msg.type === 'poll') return poll();
+    if (msg.type === 'open') return openLead(msg.phone);
+    if (msg.type === 'notify') {
+      // From the agent in WhatsApp Web. The phone number is in the title, e.g. "Hot lead: Neha (+9198…)".
+      const phone = (String(msg.title).match(/\+(\d{8,15})/) || [])[1] || '';
+      const title = msg.title.replace(/\s*\(\+\d+\)/, '').replace(/: (\d{10,15})$/, ': +$1');
+      notify(phone, title, msg.message);
+      return badge();
+    }
+    // Server mode requests from the lead card.
     if (msg.type === 'lookup') {
       const digits = String(msg.title || '').replace(/\D/g, '');
       const byPhone = digits.length >= 10;
@@ -74,13 +95,9 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
       return lead;
     }
     if (msg.type === 'business') return HL.api('/api/business');
-    if (msg.type === 'open') {
-      const { server } = await HL.config();
-      return chrome.tabs.create({ url: `${server}/dashboard${msg.phone ? `#lead=${msg.phone}` : ''}` });
-    }
     return null;
   })()
     .then((data) => reply({ ok: true, data }))
     .catch((e) => reply({ ok: false, error: e.message }));
-  return true; // keeps the channel open for the async reply
+  return true;
 });
