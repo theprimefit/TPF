@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connect</title>
+<style>
+  :root { --bg:#f2f4fa; --card:#fff; --text:#141b38; --muted:#5f6886; --line:#dfe3ee; --brand:#1b2a6b; --accent:#2557d6; --warn:#8a4f00; --warn-soft:#fff2d9; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0e1222; --card:#171d33; --text:#e7eaf6; --muted:#9aa2c0; --line:#2a3254; --brand:#b4c1ff; --accent:#7f9dff; --warn:#f2c26b; --warn-soft:#3a2d12; color-scheme: dark; } }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; display:flex; align-items:center; }
+  main { width:100%; max-width:440px; margin:0 auto; padding:24px 18px; display:flex; flex-direction:column; gap:16px; }
+  h1 { margin:0; font-size:26px; color:var(--brand); }
+  p { margin:0; }
+  .muted { color:var(--muted); font-size:14px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; display:flex; flex-direction:column; gap:12px; }
+  label { font-weight:600; font-size:14px; display:flex; flex-direction:column; gap:6px; }
+  input { font:inherit; color:inherit; width:100%; border:1px solid var(--line); background:var(--bg); border-radius:10px; padding:12px; }
+  button { font:inherit; font-weight:700; border:0; border-radius:10px; padding:13px; background:var(--accent); color:#fff; }
+  .err { background:var(--warn-soft); color:var(--warn); border-radius:10px; padding:10px 12px; font-size:14px; }
+  ul { margin:0; padding-left:18px; font-size:14px; color:var(--muted); display:grid; gap:4px; }
+  code { font-size:13px; }
+</style>
+</head>
+<body>
+<main>
+  <div>
+    <h1>Hindivine Leads</h1>
+    <p class="muted">Your WhatsApp leads, chats and payments in one app.</p>
+  </div>
+  <form class="card" id="form">
+    <p class="err" id="err" hidden></p>
+    <label for="server">Agent address
+      <input id="server" type="text" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://hindivine.ngrok-free.app" required>
+    </label>
+    <button type="submit">Connect</button>
+  </form>
+  <div class="card">
+    <p style="font-weight:600">Where do I find the address?</p>
+    <ul>
+      <li>On the computer running the agent, open the <b>Setup</b> page. The public link is shown at the top, e.g. <code>https://hindivine.ngrok-free.app</code>.</li>
+      <li>On Render it looks like <code>https://hindivine-agent.onrender.com</code>.</li>
+      <li>On the same office Wi-Fi you can use the computer's address, e.g. <code>http://192.168.1.20:3000</code>.</li>
+    </ul>
+    <p class="muted">After connecting, log in with the dashboard password.</p>
+  </div>
+</main>
+<script>
+  const q = new URLSearchParams(location.search);
+  const input = document.getElementById('server');
+  input.value = q.get('server') || '';
+  if (q.get('error')) { const e = document.getElementById('err'); e.hidden = false; e.textContent = q.get('error'); }
+  document.getElementById('form').onsubmit = (ev) => {
+    ev.preventDefault();
+    const v = input.value.trim();
+    if (!v) return;
+    if (window.HindivineApp) window.HindivineApp.setServer(v);
+  };
+</script>
+</body>
+</html>

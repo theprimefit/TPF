@@ -76,6 +76,7 @@
     <h1 id="title">WhatsApp Lead Agent</h1>
     <a href="/setup"><button>Setup</button></a>
     <a id="csv" href="#"><button>Export CSV</button></a>
+    <button id="server" hidden>Server</button>
     <button id="logout">Log out</button>
   </header>
   <main>
@@ -127,9 +128,15 @@ $('logout').onclick = () => { try { localStorage.removeItem('wa-agent-token'); }
 $('csv').onclick = async (e) => {
   e.preventDefault();
   const res = await fetch('/api/export.csv', { headers: { Authorization: `Bearer ${state.token}` } });
+  // Inside the Android app, files are saved through the app (WebView can't download blobs).
+  if (window.HindivineApp) return window.HindivineApp.saveFile('leads.csv', 'text/csv', await res.text());
   const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(await res.blob()), download: 'leads.csv' });
   a.click();
 };
+if (window.HindivineApp) {
+  $('server').hidden = false;
+  $('server').onclick = () => window.HindivineApp.changeServer();
+}
 $('q').oninput = () => loadLeads();
 $('temp').onchange = () => loadLeads();
 

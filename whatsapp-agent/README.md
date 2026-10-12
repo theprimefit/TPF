@@ -42,7 +42,9 @@ The repo includes a `render.yaml` blueprint. In Render choose **New → Blueprin
 
 ### Phone app for the team
 
-Open `https://<your public link>/dashboard` on a phone and choose **Install app** (Android Chrome) or **Share → Add to Home Screen** (iPhone). It opens full screen like an app, with the leads, chats, replies and payment checks.
+**Android app:** install [`dist/HindivineLeads.apk`](dist/HindivineLeads.apk) (Android 7.0+; allow *Install unknown apps* when asked). On first open, enter the agent's address (the public link from the setup page, your Render address, or `http://<computer-ip>:3000` on the office Wi-Fi), then log in with the dashboard password. **Server** in the dashboard header changes the address later. Rebuild with `VERSION_CODE=2 VERSION_NAME=1.1 ./android/build.sh` (needs Java 11+; keep `android/leads-release.p12`, updates must be signed with the same key).
+
+**iPhone, or without installing:** open `https://<your public link>/dashboard` and choose **Share → Add to Home Screen** (iPhone) or **Install app** (Android Chrome).
 
 ## Manual setup
 

@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# Builds whatsapp-agent/dist/HindivineLeads.apk (the lead dashboard app) without the Android SDK or Gradle.
+# Needs: Java 11+, curl, zip/unzip, python3. Build tools are fetched from Maven Central.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+REPO="$(cd "$ROOT/.." && pwd)"
+AND="$ROOT/android"
+TOOLS="${TOOLS_DIR:-$REPO/android/.tools}"  # shared with the diet app build
+BUILD="$AND/build"
+OUT="$ROOT/dist/HindivineLeads.apk"
+KEYSTORE="${KEYSTORE:-$AND/leads-release.p12}"
+STOREPASS="${STOREPASS:-hindivineleads}"
+ALIAS="${KEY_ALIAS:-leads}"
+
+VERSION_CODE="${VERSION_CODE:-1}"
+VERSION_NAME="${VERSION_NAME:-1.0}"
+MIN_SDK=24  # v2 signing only (apksig 2.3.0 cannot produce v1 signatures on modern JDKs)
+TARGET_SDK=30
+
+M=https://repo1.maven.org/maven2
+fetch() { # url dest
+  [ -s "$2" ] && return 0
+  for d in 0 3 8 16 30; do
+    sleep "$d"
+    curl -sSfL -o "$2.tmp" "$1" && mv "$2.tmp" "$2" && return 0
+  done
+  echo "failed to download $1" >&2; exit 1
+}
+
+mkdir -p "$TOOLS"
+fetch "$M/org/apktool/apktool-cli/3.0.3/apktool-cli-3.0.3.jar" "$TOOLS/apktool.jar"
+fetch "$M/com/jakewharton/android/repackaged/dalvik-dx/16.0.1/dalvik-dx-16.0.1.jar" "$TOOLS/dx.jar"
+fetch "$M/com/android/tools/build/apksig/2.3.0/apksig-2.3.0.jar" "$TOOLS/apksig.jar"
+fetch "$M/org/robolectric/android-all/11-robolectric-6757853/android-all-11-robolectric-6757853.jar" "$TOOLS/android-all.jar"
+if [ ! -x "$TOOLS/prebuilt/linux/aapt2" ]; then
+  (cd "$TOOLS" && unzip -o -q apktool.jar 'prebuilt/linux/aapt2' 'prebuilt/android-framework.jar' && chmod +x prebuilt/linux/aapt2)
+fi
+AAPT2="$TOOLS/prebuilt/linux/aapt2"
+FRAMEWORK="$TOOLS/prebuilt/android-framework.jar"
+
+rm -rf "$BUILD"
+mkdir -p "$BUILD"/{res,gen,classes,assets,dex} "$(dirname "$OUT")"
+
+echo "• Copying connect screen into assets"
+cp "$AND/assets/"* "$BUILD/assets/"
+
+echo "• Compiling resources"
+"$AAPT2" compile --dir "$AND/res" -o "$BUILD/res/res.zip"
+"$AAPT2" link -o "$BUILD/unsigned.apk" \
+  -I "$FRAMEWORK" \
+  --manifest "$AND/AndroidManifest.xml" \
+  --min-sdk-version "$MIN_SDK" --target-sdk-version "$TARGET_SDK" \
+  --version-code "$VERSION_CODE" --version-name "$VERSION_NAME" \
+  -A "$BUILD/assets" \
+  --java "$BUILD/gen" \
+  "$BUILD/res/res.zip"
+
+echo "• Compiling Java"
+find "$AND/src" "$BUILD/gen" -name '*.java' > "$BUILD/sources.txt"
+javac -nowarn --release 8 -encoding UTF-8 -classpath "$TOOLS/android-all.jar" -d "$BUILD/classes" @"$BUILD/sources.txt" 2>&1 | grep -v "bootstrap classpath\|^1 warning\|^warning: \[options\]\|source value 8\|target value 8\|To suppress warnings" || true
+[ -f "$BUILD/classes/com/hindivine/leads/MainActivity.class" ] || { echo "javac failed" >&2; exit 1; }
+
+echo "• Converting to dex"
+java -cp "$TOOLS/dx.jar" com.android.dx.command.Main --dex --min-sdk-version="$MIN_SDK" --output="$BUILD/dex/classes.dex" "$BUILD/classes"
+(cd "$BUILD/dex" && zip -q "$BUILD/unsigned.apk" classes.dex)
+
+echo "• Signing"
+if [ ! -f "$KEYSTORE" ]; then
+  echo "  (creating new signing key at $KEYSTORE — keep it safe; updates must use the same key)"
+  keytool -genkeypair -storetype PKCS12 -keystore "$KEYSTORE" -storepass "$STOREPASS" -keypass "$STOREPASS" \
+    -alias "$ALIAS" -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Hindivine Leads, O=Hindivine Healthcare Private Limited, C=IN" 2>/dev/null
+fi
+javac -nowarn -d "$BUILD/signer" -classpath "$TOOLS/apksig.jar" "$REPO/android/tools/SignApk.java"
+java --add-exports java.base/sun.security.x509=ALL-UNNAMED --add-exports java.base/sun.security.pkcs=ALL-UNNAMED --add-exports java.base/sun.security.util=ALL-UNNAMED \
+  -cp "$BUILD/signer:$TOOLS/apksig.jar" SignApk "$KEYSTORE" "$STOREPASS" "$ALIAS" "$MIN_SDK" "$BUILD/unsigned.apk" "$OUT"
+
+echo "✓ Built $OUT ($(du -h "$OUT" | cut -f1))"

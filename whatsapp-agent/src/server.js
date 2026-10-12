@@ -326,6 +326,8 @@ function main() {
   http.createServer(createApp(deps)).listen(port, () => {
     const local = `http://localhost:${port}`;
     console.log(`\n  Hindivine WhatsApp lead agent is running.\n  Dashboard: ${local}/dashboard\n  Setup:     ${local}/setup`);
+    const lan = Object.values(require('node:os').networkInterfaces()).flat().filter((i) => i && i.family === 'IPv4' && !i.internal).map((i) => `http://${i.address}:${port}`);
+    if (lan.length) console.log(`  On the office Wi-Fi (phone app): ${lan.join('  ')}`);
     if (state.setupCode) console.log(`  First-time setup code: ${state.setupCode}`);
     console.log('  Keep this window open. Close it to stop the agent.\n');
     if (env.OPEN_BROWSER === '1') openBrowser(`${local}/setup${state.setupCode ? `#${state.setupCode}` : ''}`);
