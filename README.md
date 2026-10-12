@@ -101,6 +101,7 @@ npm test             # Node 18+, no dependencies
 | `android/` | Android WebView wrapper and build script |
 | `dist/HindivineDiet.apk` | Built Android app |
 | `tests/` | Unit tests (planner, recipes, storage, PDF read-back) |
+| `whatsapp-agent/` | WhatsApp lead agent: AI auto-reply, lead scoring, follow-ups and CRM dashboard (see its [README](whatsapp-agent/README.md)) |
 
 ## Disclaimer
 

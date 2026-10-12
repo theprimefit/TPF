@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WhatsApp Lead Agent</title>
+<style>
+  :root { --bg:#f4f6f5; --card:#fff; --text:#16201c; --muted:#66746e; --line:#e2e8e5; --brand:#128c4a; --brand-soft:#e3f4ea; --hot:#d93f2b; --warm:#d98a00; --cold:#5a7fa6; --in:#fff; --out:#dcf8c6; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0f1513; --card:#18211e; --text:#e6ece9; --muted:#93a39c; --line:#2a3531; --brand:#2fbf6d; --brand-soft:#173826; --in:#22302b; --out:#1f4a33; } }
+  * { box-sizing:border-box; }
+  [hidden] { display:none !important; }
+  body { margin:0; font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--text); }
+  header { display:flex; align-items:center; gap:12px; padding:12px 16px; background:var(--card); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:2; }
+  header h1 { font-size:16px; margin:0; flex:1; }
+  button, select, input, textarea { font:inherit; color:inherit; }
+  button { border:1px solid var(--line); background:var(--card); border-radius:8px; padding:6px 12px; cursor:pointer; }
+  button.primary { background:var(--brand); border-color:var(--brand); color:#fff; }
+  input, select, textarea { border:1px solid var(--line); background:var(--card); border-radius:8px; padding:7px 10px; }
+  main { padding:16px; max-width:1400px; margin:0 auto; }
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:14px; }
+  .tile { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; }
+  .tile b { display:block; font-size:24px; font-variant-numeric:tabular-nums; }
+  .tile span { color:var(--muted); font-size:12px; }
+  .pipeline { display:flex; gap:6px; overflow-x:auto; margin-bottom:14px; }
+  .pipeline button { white-space:nowrap; }
+  .pipeline button.on { background:var(--brand-soft); border-color:var(--brand); }
+  .layout { display:grid; grid-template-columns:minmax(280px,420px) 1fr; gap:14px; align-items:start; }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  .filters { display:flex; gap:6px; padding:10px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .filters input { flex:1; min-width:120px; }
+  .list { max-height:calc(100vh - 300px); overflow:auto; }
+  .lead { padding:10px 12px; border-bottom:1px solid var(--line); cursor:pointer; display:grid; grid-template-columns:1fr auto; gap:2px 8px; }
+  .lead:hover, .lead.sel { background:var(--brand-soft); }
+  .lead .name { font-weight:600; }
+  .lead .meta, .lead .preview { color:var(--muted); font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pill { display:inline-block; border-radius:99px; padding:1px 8px; font-size:11px; font-weight:600; color:#fff; }
+  .hot { background:var(--hot); } .warm { background:var(--warm); } .cold { background:var(--cold); }
+  .tag { display:inline-block; border:1px solid var(--line); border-radius:99px; padding:0 7px; font-size:11px; color:var(--muted); margin-left:4px; }
+  .detail { display:grid; grid-template-columns:1fr 280px; min-height:500px; }
+  .chat { display:flex; flex-direction:column; border-right:1px solid var(--line); min-width:0; }
+  .chat-head { padding:12px; border-bottom:1px solid var(--line); display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .msgs { flex:1; overflow:auto; padding:12px; display:flex; flex-direction:column; gap:6px; max-height:calc(100vh - 330px); min-height:300px; }
+  .msg { max-width:78%; padding:7px 10px; border-radius:10px; white-space:pre-wrap; word-wrap:break-word; border:1px solid var(--line); }
+  .msg.in { background:var(--in); align-self:flex-start; }
+  .msg.out { background:var(--out); align-self:flex-end; }
+  .msg small { display:block; color:var(--muted); font-size:11px; margin-top:2px; }
+  .composer { display:flex; gap:6px; padding:10px; border-top:1px solid var(--line); }
+  .composer textarea { flex:1; resize:vertical; min-height:40px; }
+  .side { padding:12px; display:flex; flex-direction:column; gap:10px; overflow:auto; }
+  .side h3 { margin:6px 0 0; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+  .kv { display:grid; grid-template-columns:auto 1fr; gap:3px 10px; font-size:13px; }
+  .kv dt { color:var(--muted); } .kv dd { margin:0; }
+  .reasons { font-size:12px; color:var(--muted); margin:0; padding-left:16px; }
+  .banner { background:#fff4d6; color:#5c4300; padding:8px 12px; border-bottom:1px solid var(--line); font-size:13px; }
+  .empty { padding:40px; text-align:center; color:var(--muted); }
+  #login { max-width:360px; margin:12vh auto; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; display:flex; flex-direction:column; gap:10px; }
+  @media (max-width:900px) { .layout, .detail { grid-template-columns:1fr; } .chat { border-right:0; } .list { max-height:40vh; } }
+</style>
+</head>
+<body>
+<div id="login" hidden>
+  <h2 style="margin:0">WhatsApp Lead Agent</h2>
+  <p style="margin:0;color:var(--muted)">Enter the dashboard token (DASHBOARD_TOKEN in .env).</p>
+  <input id="token" type="password" placeholder="Dashboard token">
+  <button class="primary" id="loginBtn">Open dashboard</button>
+  <p id="loginErr" style="color:var(--hot);margin:0"></p>
+</div>
+
+<div id="app" hidden>
+  <header>
+    <h1 id="title">WhatsApp Lead Agent</h1>
+    <a id="csv" href="#"><button>Export CSV</button></a>
+    <button id="logout">Log out</button>
+  </header>
+  <main>
+    <div class="tiles" id="tiles"></div>
+    <div class="pipeline" id="pipeline"></div>
+    <div class="layout">
+      <section class="panel">
+        <div class="filters">
+          <input id="q" placeholder="Search name, phone, goal">
+          <select id="temp"><option value="">All</option><option value="hot">🔥 Hot</option><option value="warm">Warm</option><option value="cold">Cold</option></select>
+        </div>
+        <div class="list" id="list"></div>
+      </section>
+      <section class="panel" id="detail"><div class="empty">Select a lead to see the chat.</div></section>
+    </div>
+  </main>
+</div>
+
+<script>
+const STAGES = ['new', 'engaged', 'qualified', 'booked', 'won', 'lost'];
+const state = { token: '', stage: '', selected: null, leads: [] };
+try { state.token = localStorage.getItem('wa-agent-token') || ''; } catch (e) {}
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const ago = (iso) => {
+  if (!iso) return '';
+  const s = (Date.now() - Date.parse(iso)) / 1000;
+  if (s < 60) return 'now';
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h`;
+  return `${Math.floor(s / 86400)}d`;
+};
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { ...opts, headers: { Authorization: `Bearer ${state.token}`, 'Content-Type': 'application/json', ...(opts.headers || {}) } });
+  if (res.status === 401) { showLogin('Wrong token'); throw new Error('unauthorised'); }
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
+  return res.json();
+}
+
+function showLogin(err = '') { $('app').hidden = true; $('login').hidden = false; $('loginErr').textContent = err; }
+$('loginBtn').onclick = () => {
+  state.token = $('token').value.trim();
+  try { localStorage.setItem('wa-agent-token', state.token); } catch (e) {}
+  start();
+};
+$('token').onkeydown = (e) => { if (e.key === 'Enter') $('loginBtn').click(); };
+$('logout').onclick = () => { try { localStorage.removeItem('wa-agent-token'); } catch (e) {} state.token = ''; showLogin(); };
+$('csv').onclick = async (e) => {
+  e.preventDefault();
+  const res = await fetch('/api/export.csv', { headers: { Authorization: `Bearer ${state.token}` } });
+  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(await res.blob()), download: 'leads.csv' });
+  a.click();
+};
+$('q').oninput = () => loadLeads();
+$('temp').onchange = () => loadLeads();
+
+async function loadStats() {
+  const s = await api('/api/stats');
+  $('title').textContent = `${s.business} · WhatsApp Lead Agent`;
+  $('tiles').innerHTML = [
+    ['Total leads', s.total], ['New today', s.newToday], ['🔥 Hot', s.byTemp.hot || 0],
+    ['Booked', s.byStage.booked], ['Won', s.byStage.won], ['Conversion', `${s.conversionRate}%`], ['Needs a human', s.needsHuman],
+  ].map(([k, v]) => `<div class="tile"><b>${esc(v)}</b><span>${esc(k)}</span></div>`).join('');
+  $('pipeline').innerHTML = [['', 'All', s.total], ...STAGES.map((st) => [st, st[0].toUpperCase() + st.slice(1), s.byStage[st]])]
+    .map(([st, label, n]) => `<button data-stage="${st}" class="${state.stage === st ? 'on' : ''}">${label} · ${n}</button>`).join('');
+  $('pipeline').querySelectorAll('button').forEach((b) => (b.onclick = () => { state.stage = b.dataset.stage; loadStats(); loadLeads(); }));
+}
+
+async function loadLeads() {
+  const p = new URLSearchParams({ q: $('q').value, temperature: $('temp').value, stage: state.stage });
+  state.leads = await api(`/api/leads?${p}`);
+  $('list').innerHTML = state.leads.length ? state.leads.map((l) => `
+    <div class="lead ${state.selected === l.phone ? 'sel' : ''}" data-phone="${esc(l.phone)}">
+      <div class="name">${esc(l.name || '+' + l.phone)}${l.botPaused && !l.optedOut ? '<span class="tag">👤 human</span>' : ''}${l.optedOut ? '<span class="tag">opted out</span>' : ''}</div>
+      <div><span class="pill ${l.temperature}">${l.score}</span></div>
+      <div class="meta">${esc(l.stage)} · ${esc(l.profile?.goal || l.source)} · ${ago(l.updatedAt)}</div>
+      <div class="meta">${l.messageCount} msgs</div>
+      <div class="preview" style="grid-column:1/-1">${l.lastMessage ? (l.lastMessage.dir === 'in' ? '' : '↩ ') + esc(l.lastMessage.text) : ''}</div>
+    </div>`).join('') : '<div class="empty">No leads yet. Message your WhatsApp number to test.</div>';
+  $('list').querySelectorAll('.lead').forEach((el) => (el.onclick = () => openLead(el.dataset.phone)));
+}
+
+async function openLead(phone) {
+  state.selected = phone;
+  const l = await api(`/api/leads/${encodeURIComponent(phone)}`);
+  const p = l.profile || {};
+  const draft = $('reply') ? $('reply').value : '';
+  $('detail').innerHTML = `
+    <div class="detail">
+      <div class="chat">
+        ${l.botPaused && !l.optedOut ? `<div class="banner">👤 Bot paused${l.handoffReason ? `: ${esc(l.handoffReason)}` : ''}. You are handling this chat.</div>` : ''}
+        <div class="chat-head">
+          <b style="flex:1">${esc(l.name || '+' + l.phone)} <span class="pill ${l.temperature}">${l.temperature} · ${l.score}</span></b>
+          <a href="https://wa.me/${esc(l.phone)}" target="_blank" rel="noopener"><button>Open in WhatsApp</button></a>
+          <button id="toggleBot">${l.botPaused ? '▶ Resume bot' : '⏸ Pause bot'}</button>
+        </div>
+        <div class="msgs" id="msgs">${l.messages.map((m) => `<div class="msg ${m.dir}">${esc(m.text)}${m.buttons && m.buttons.length ? `\n[${m.buttons.map(esc).join('] [')}]` : ''}<small>${m.dir === 'out' ? esc(m.by) + ' · ' : ''}${new Date(m.at).toLocaleString()}</small></div>`).join('')}</div>
+        <div class="composer">
+          <textarea id="reply" placeholder="Type a reply (pauses the bot)">${esc(draft)}</textarea>
+          <button class="primary" id="sendBtn">Send</button>
+        </div>
+      </div>
+      <aside class="side">
+        <label>Stage <select id="stage">${STAGES.map((s) => `<option ${s === l.stage ? 'selected' : ''}>${s}</option>`).join('')}</select></label>
+        ${l.summary ? `<div><h3>AI summary</h3>${esc(l.summary)}</div>` : ''}
+        <div><h3>Profile</h3><dl class="kv">
+          <dt>Phone</dt><dd>+${esc(l.phone)}</dd>
+          <dt>Source</dt><dd>${esc(l.source)}${l.sourceDetail ? ` · ${esc(l.sourceDetail)}` : ''}</dd>
+          ${Object.entries(p).filter(([k]) => k !== 'name').map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}
+          <dt>Follow-ups</dt><dd>${l.followupsSent || 0} sent</dd>
+          <dt>Created</dt><dd>${new Date(l.createdAt).toLocaleString()}</dd>
+        </dl></div>
+        <div><h3>Why this score</h3><ul class="reasons">${(l.scoreReasons || []).map((r) => `<li>${esc(r)}</li>`).join('')}</ul></div>
+        <div><h3>Notes</h3><textarea id="notes" rows="4" style="width:100%">${esc(l.notes)}</textarea><button id="saveNotes" style="margin-top:6px">Save notes</button></div>
+      </aside>
+    </div>`;
+  $('msgs').scrollTop = $('msgs').scrollHeight;
+  const patch = async (body) => { await api(`/api/leads/${encodeURIComponent(phone)}`, { method: 'PATCH', body: JSON.stringify(body) }); refresh(); };
+  $('toggleBot').onclick = () => patch({ botPaused: !l.botPaused });
+  $('stage').onchange = (e) => patch({ stage: e.target.value });
+  $('saveNotes').onclick = () => patch({ notes: $('notes').value });
+  $('sendBtn').onclick = async () => {
+    const text = $('reply').value.trim();
+    if (!text) return;
+    $('sendBtn').disabled = true;
+    try { await api(`/api/leads/${encodeURIComponent(phone)}/send`, { method: 'POST', body: JSON.stringify({ text }) }); $('reply').value = ''; refresh(); }
+    catch (e) { alert(`Send failed: ${e.message}`); }
+    finally { $('sendBtn').disabled = false; }
+  };
+  $('list').querySelectorAll('.lead').forEach((el) => el.classList.toggle('sel', el.dataset.phone === phone));
+}
+
+async function refresh() {
+  await Promise.all([loadStats(), loadLeads()]);
+  if (state.selected && document.activeElement?.id !== 'reply' && document.activeElement?.id !== 'notes') await openLead(state.selected);
+}
+
+async function start() {
+  if (!state.token) return showLogin();
+  try { await refresh(); $('login').hidden = true; $('app').hidden = false; } catch (e) { if (e.message !== 'unauthorised') showLogin(e.message); }
+}
+setInterval(() => { if (!$('app').hidden) refresh().catch(() => {}); }, 10000);
+start();
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "hindivine-whatsapp-agent",
+  "version": "1.0.0",
+  "private": true,
+  "description": "All-in-one WhatsApp lead agent: instant AI auto-reply, lead capture, scoring, follow-ups and a CRM dashboard.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.133.0"
+  },
+  "license": "UNLICENSED"
+}
