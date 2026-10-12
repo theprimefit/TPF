@@ -429,3 +429,39 @@ test('setup page: first-run code, save settings, password, QR upload, secrets st
   assert.equal(res.status, 200);
   assert.ok(wa.sent.some((m) => m.to === '919876543210' && /connected/.test(m.text)));
 });
+
+test('linked device: reads WhatsApp messages and skips groups and status', () => {
+  const { parseWebMessage } = require('../src/whatsapp-web');
+  const type = (m) => Object.keys(m)[0];
+  const text = parseWebMessage({ key: { id: 'A', remoteJid: '919812345678@s.whatsapp.net' }, pushName: 'Neha', messageTimestamp: 1700000000, message: { conversation: ' price? ' } }, type);
+  assert.deepEqual([text.from, text.name, text.text, text.type, text.fromMe], ['919812345678', 'Neha', 'price?', 'text', false]);
+  const lid = parseWebMessage({ key: { id: 'B', remoteJid: '12345@lid', remoteJidAlt: '919800000001@s.whatsapp.net' }, message: { extendedTextMessage: { text: 'hi', contextInfo: { externalAdReply: { title: 'Mounjaro program' } } } } }, type);
+  assert.equal(lid.from, '919800000001', 'phone number found behind a LID chat');
+  assert.equal(lid.jid, '12345@lid', 'replies go back to the same chat');
+  assert.deepEqual(lid.referral, { source: 'ad', detail: 'Mounjaro program' });
+  const img = parseWebMessage({ key: { id: 'C', remoteJid: '91980@s.whatsapp.net' }, message: { imageMessage: { mimetype: 'image/jpeg' } } }, type);
+  assert.deepEqual([img.type, img.text], ['image', '[image]']);
+  assert.equal(parseWebMessage({ key: { id: 'D', remoteJid: '1203@g.us' }, message: { conversation: 'group' } }, type), null);
+  assert.equal(parseWebMessage({ key: { id: 'E', remoteJid: 'status@broadcast' }, message: { conversation: 's' } }, type), null);
+});
+
+test('linked device: follow-ups after 24 hours are plain messages, and phone replies pause the bot', async () => {
+  const store = createStore(null);
+  const wa = fakeWhatsApp();
+  const rules = createRuleBrain({ business });
+  const agent = createAgent({ store, wa, brain: rules, fallbackBrain: rules, business, freeFormFollowups: true, log: quiet });
+  await agent.handleInbound({ id: 'x1', from: '919800000001', name: 'Priya', type: 'text', text: 'hi' });
+  const t0 = Date.parse('2026-10-13T05:00:00Z');
+  const lead = store.getLead('919800000001');
+  lead.lastInboundAt = new Date(t0).toISOString();
+  lead.lastOutboundAt = new Date(t0 + 1000).toISOString();
+  lead.followupsSent = 2;
+  assert.equal(await agent.runFollowups(t0 + 72 * 3600000 + 60000), 1);
+  const last = wa.sent.at(-1);
+  assert.equal(last.type, 'text', 'no template needed');
+  assert.match(last.text, /consultation is still available/);
+
+  agent.recordHumanReply('919800000001', 'Hi Priya, Dr. Goel\'s team here');
+  assert.ok(store.getLead('919800000001').botPaused);
+  assert.equal(store.getLead('919800000001').messages.at(-1).by, 'human');
+});

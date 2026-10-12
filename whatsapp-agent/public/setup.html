@@ -72,6 +72,19 @@
         <ul class="steps" id="steps"></ul>
       </section>
 
+      <section class="card" id="linkCard" hidden>
+        <h2>Link your WhatsApp</h2>
+        <div id="linkBody"></div>
+        <details id="pairBox">
+          <summary>Using this phone? Link with a code instead</summary>
+          <p class="muted" style="margin-top:8px">Enter the business WhatsApp number, then in WhatsApp go to <b>Settings → Linked devices → Link a device → Link with phone number instead</b> and type the code.</p>
+          <div class="row" style="margin-top:8px"><input id="pairPhone" inputmode="tel" placeholder="918920831975" aria-label="WhatsApp number"><button id="pairBtn">Get code</button></div>
+          <p id="pairCode" style="font:700 28px ui-monospace,Menlo,monospace;letter-spacing:.08em;margin-top:8px" hidden></p>
+        </details>
+        <p class="muted">Linked-device mode is unofficial. To lower the risk of WhatsApp blocking the number, the agent only answers people who message first, types at a human pace and never sends bulk messages. Your phone needs internet now and then to stay linked.</p>
+        <p class="msg" id="linkMsg" hidden></p>
+      </section>
+
       <section class="card" id="webhookCard">
         <h2>Connect Meta to this agent</h2>
         <p class="muted">In developers.facebook.com → your app → WhatsApp → Configuration → Webhook, paste these two values, click Verify and save, then subscribe to <b>messages</b>.</p>
@@ -162,17 +175,26 @@ function render(s) {
   status = s;
   pollTunnel(s);
   const r = s.ready;
-  const steps = [
+  const steps = s.mode === 'web' ? [
+    [!s.firstRun, 'Dashboard password saved'],
+    [r.whatsapp, r.whatsapp ? `WhatsApp linked: +${s.link.me}` : 'Link your WhatsApp (scan the QR code below)'],
+  ] : [
     [!s.firstRun, 'Dashboard password saved'],
     [r.publicUrl, s.publicUrl ? `Public link ready: ${s.publicUrl}` : 'Public link (a tunnel on your computer, or your server address)'],
     [r.whatsapp, 'WhatsApp details added (token, phone number ID, app secret, verify token)'],
+  ];
+  steps.push(
     [r.qr, 'UPI QR code uploaded'],
     [r.alerts, 'Team alert numbers added', true],
-    [r.template, 'Follow-up template name added', true],
+    ...(s.mode === 'web' ? [] : [[r.template, 'Follow-up template name added', true]]),
     [r.claude, 'Claude key added for AI replies', true],
-  ];
+  );
   $('steps').innerHTML = steps.map(([done, text, opt], i) => `<li class="${done ? 'done' : ''}"><span class="dot">${done ? '✓' : i + 1}</span><span>${esc(text)}${opt && !done ? ' <span class="opt">(optional)</span>' : ''}</span></li>`).join('');
 
+  const web = s.mode === 'web';
+  $('linkCard').hidden = !web;
+  $('webhookCard').hidden = web;
+  if (web) renderLink(s.link);
   $('urls').hidden = !s.webhookUrl;
   $('noUrl').hidden = Boolean(s.webhookUrl);
   $('noUrl').textContent = s.tunnel.error || (s.tunnel.kind ? `Waiting for the ${s.tunnel.kind} public link… refresh in a few seconds.` : 'No public link yet. Choose a public link below (on your own computer) or enter your server address.');
@@ -205,7 +227,7 @@ function pollTunnel(s) {
 function field(f) {
   const id = `f-${f.key}`;
   const input = f.options
-    ? `<select id="${id}" name="${f.key}">${f.options.map((o) => `<option value="${o}" ${o === f.value ? 'selected' : ''}>${o ? o[0].toUpperCase() + o.slice(1) : 'None (hosted server)'}</option>`).join('')}</select>`
+    ? `<select id="${id}" name="${f.key}">${f.options.map((o) => `<option value="${o}" ${o === (f.value || (f.key === 'WHATSAPP_MODE' ? status.mode : '')) ? 'selected' : ''}>${esc((f.optionLabels && f.optionLabels[o]) || (o ? o[0].toUpperCase() + o.slice(1) : 'None (hosted server)'))}</option>`).join('')}</select>`
     : `<input id="${id}" name="${f.key}" type="${f.secret ? 'password' : 'text'}" value="${esc(f.value)}" placeholder="${esc(f.secret ? f.masked || 'Not set' : '')}" autocomplete="off" spellcheck="false">`;
   return `<label for="${id}">${esc(f.label)}${input}<small>${esc(f.help)}</small></label>`;
 }
@@ -254,6 +276,40 @@ document.querySelectorAll('[data-copy]').forEach((b) => (b.onclick = async () =>
   try { await navigator.clipboard.writeText(text); b.textContent = 'Copied'; } catch (e) { const r = document.createRange(); r.selectNodeContents($(b.dataset.copy)); getSelection().removeAllRanges(); getSelection().addRange(r); }
   setTimeout(() => (b.textContent = 'Copy'), 1500);
 }));
+
+let linkTimer = null;
+function renderLink(link) {
+  clearTimeout(linkTimer);
+  const st = link ? link.state : 'starting';
+  let html = '';
+  if (st === 'connected') {
+    html = `<p class="msg ok">✓ Linked to <b>+${esc(link.me)}</b>. The agent is replying to new messages.</p><div class="row"><button id="unlinkBtn">Unlink this number</button></div>`;
+  } else if (st === 'qr' && link.qr) {
+    html = `<div class="qr"><img src="${link.qr}" alt="WhatsApp link QR code" style="width:220px;height:220px"><ol class="how" style="flex:1;min-width:200px"><li>Open <b>WhatsApp</b> on the business phone.</li><li>Tap <b>⋮ / Settings → Linked devices → Link a device</b>.</li><li>Point the phone at this QR code.</li></ol></div>`;
+  } else {
+    html = `<p class="muted">${st === 'reconnecting' ? 'Reconnecting to WhatsApp…' : st === 'error' ? 'Could not reach WhatsApp.' : 'Getting a QR code from WhatsApp…'}</p>`;
+  }
+  if (link && link.error) html += `<p class="msg err">${esc(link.error)}</p>`;
+  if (link && link.pairingCode && st !== 'connected') { $('pairCode').hidden = false; $('pairCode').textContent = link.pairingCode; }
+  $('linkBody').innerHTML = html;
+  $('pairBox').hidden = st === 'connected';
+  const un = document.getElementById('unlinkBtn');
+  if (un) un.onclick = async () => {
+    if (un.dataset.sure !== '1') { un.dataset.sure = '1'; un.textContent = 'Tap again to unlink'; return; }
+    un.disabled = true;
+    try { await api('/api/setup/link/logout', { method: 'POST', body: '{}' }); pollLink(); } catch (e) { note('linkMsg', e.message, false); }
+  };
+  if (st !== 'connected') linkTimer = setTimeout(pollLink, 3000);
+}
+async function pollLink() {
+  try { const r = await api('/api/setup/link'); if (r.mode === 'web') { renderLink(r.link); if (r.link && r.link.state === 'connected' && status && !status.ready.whatsapp) load(); } } catch (e) { /* login screen shows on 401 */ }
+}
+$('pairBtn').onclick = async () => {
+  $('pairBtn').disabled = true;
+  try { const r = await api('/api/setup/link/pair', { method: 'POST', body: JSON.stringify({ phone: $('pairPhone').value }) }); $('pairCode').hidden = false; $('pairCode').textContent = r.code; }
+  catch (e) { if (e.message !== 'unauthorised') note('linkMsg', e.message, false); }
+  finally { $('pairBtn').disabled = false; }
+};
 
 async function load() {
   try { const s = await api('/api/setup'); $('login').hidden = true; $('app').hidden = false; render(s); } catch (e) { if (e.message !== 'unauthorised') showLogin(e.message); }

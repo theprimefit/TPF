@@ -6,6 +6,7 @@ const path = require('node:path');
 
 const FIELDS = [
   { key: 'DASHBOARD_TOKEN', label: 'Dashboard password', secret: true, group: 'Dashboard', help: 'Your team uses this to open the dashboard and this setup page.' },
+  { key: 'WHATSAPP_MODE', label: 'How WhatsApp connects', group: 'WhatsApp', options: ['web', 'cloud'], optionLabels: { web: 'Linked device: scan a QR with your phone (easiest)', cloud: 'Official Cloud API (Meta business setup)' }, help: 'Linked device works in minutes with your current number, but it is unofficial: WhatsApp may block numbers it sees as automated. The Cloud API is official and safest for business use.' },
   { key: 'WHATSAPP_TOKEN', label: 'WhatsApp access token', secret: true, group: 'WhatsApp', help: 'Meta Business Settings → System users → Generate token (whatsapp_business_messaging).' },
   { key: 'WHATSAPP_PHONE_NUMBER_ID', label: 'Phone number ID', group: 'WhatsApp', help: 'developers.facebook.com → your app → WhatsApp → API Setup.' },
   { key: 'WHATSAPP_APP_SECRET', label: 'App secret', secret: true, group: 'WhatsApp', help: 'App settings → Basic → App secret. Proves messages really come from Meta.' },

@@ -10,6 +10,7 @@ const { createClaudeBrain, createRuleBrain } = require('./brain');
 const { createAgent } = require('./agent');
 const settings = require('./settings');
 const { startTunnel } = require('./tunnel');
+const { createWhatsAppWeb } = require('./whatsapp-web');
 
 const ROOT = path.join(__dirname, '..');
 const STATIC = {
@@ -75,8 +76,12 @@ function createApp(deps) {
       tunnel: { kind: env.TUNNEL || '', url: state.tunnelUrl || '', error: state.tunnelError || '' },
       qr: qr ? `/media/${path.basename(qr)}` : '',
       upiId: business.payment?.upiId || '',
+      mode: modeOf(env),
+      link: deps.web ? deps.web.status() : null,
       ready: {
-        whatsapp: Boolean(env.WHATSAPP_TOKEN && env.WHATSAPP_PHONE_NUMBER_ID && env.WHATSAPP_APP_SECRET && env.WHATSAPP_VERIFY_TOKEN),
+        whatsapp: modeOf(env) === 'web'
+          ? Boolean(deps.web && deps.web.status().state === 'connected')
+          : Boolean(env.WHATSAPP_TOKEN && env.WHATSAPP_PHONE_NUMBER_ID && env.WHATSAPP_APP_SECRET && env.WHATSAPP_VERIFY_TOKEN),
         publicUrl: Boolean(publicUrl()),
         qr: Boolean(qr),
         claude: Boolean(env.ANTHROPIC_API_KEY),
@@ -147,7 +152,28 @@ function createApp(deps) {
           if (deps.reload) deps.reload({});
           return send(res, 200, setupStatus());
         }
-        if (parts[2] === 'check' && req.method === 'GET') return send(res, 200, await checkWhatsApp(env));
+        if (parts[2] === 'check' && req.method === 'GET') {
+          if (modeOf(env) === 'web') {
+            const st = deps.web ? deps.web.status() : { state: 'off' };
+            return send(res, 200, st.state === 'connected' ? { ok: true, message: `Linked: +${st.me}` } : { ok: false, message: 'Not linked yet. Scan the QR code above.' });
+          }
+          return send(res, 200, await checkWhatsApp(env));
+        }
+        if (parts[2] === 'link' && req.method === 'GET') return send(res, 200, { mode: modeOf(env), link: deps.web ? deps.web.status() : null });
+        if (parts[2] === 'link' && parts[3] === 'pair' && req.method === 'POST') {
+          if (!deps.web) return send(res, 400, { error: 'Choose "Linked device" first and save.' });
+          const phone = String((await json(req)).phone || '').replace(/\D/g, '');
+          if (phone.length < 10) return send(res, 400, { error: 'Enter your WhatsApp number with country code, e.g. 918920831975.' });
+          try {
+            return send(res, 200, { code: await deps.web.pairingCode(phone) });
+          } catch (e) {
+            return send(res, 400, { error: e.message });
+          }
+        }
+        if (parts[2] === 'link' && parts[3] === 'logout' && req.method === 'POST') {
+          if (deps.web) await deps.web.logout();
+          return send(res, 200, { ok: true });
+        }
         if (parts[2] === 'test' && req.method === 'POST') {
           const to = String((await json(req)).to || '').replace(/\D/g, '');
           if (to.length < 10) return send(res, 400, { error: 'Enter a WhatsApp number with country code, e.g. 919876543210.' });
@@ -164,7 +190,7 @@ function createApp(deps) {
       if (parts[0] === 'api') {
         if (!authorised(req)) return send(res, 401, { error: 'unauthorised' });
 
-        if (url.pathname === '/api/stats') return send(res, 200, { ...store.stats(), business: business.businessName });
+        if (url.pathname === '/api/stats') return send(res, 200, { ...store.stats(), business: business.businessName, whatsapp: { mode: modeOf(env), state: deps.web ? deps.web.status().state : env.WHATSAPP_TOKEN ? 'connected' : 'off' } });
 
         if (url.pathname === '/api/leads' && req.method === 'GET') {
           const q = (url.searchParams.get('q') || '').toLowerCase();
@@ -215,6 +241,12 @@ function createApp(deps) {
       if (!res.headersSent) send(res, e.message.startsWith('unknown stage') ? 400 : 500, { error: e.message });
     }
   };
+}
+
+// Linked device unless the Cloud API was chosen (or set up before linked devices existed).
+function modeOf(env) {
+  if (env.WHATSAPP_MODE === 'web' || env.WHATSAPP_MODE === 'cloud') return env.WHATSAPP_MODE;
+  return env.WHATSAPP_TOKEN ? 'cloud' : 'web';
 }
 
 // The server's own public address: set by hand, or provided by Render / Railway.
@@ -272,8 +304,22 @@ function main() {
   const mediaDirs = [path.join(path.dirname(path.resolve(ROOT, env.DATA_FILE || './data/leads.json')), 'media'), path.join(ROOT, 'public', 'media')];
 
   // (Re)creates the WhatsApp client and the agent from the current settings.
+  const dataDir = path.dirname(path.resolve(ROOT, env.DATA_FILE || './data/leads.json'));
   function build() {
-    deps.wa = createWhatsApp({ token: env.WHATSAPP_TOKEN, phoneNumberId: env.WHATSAPP_PHONE_NUMBER_ID, apiVersion: env.WHATSAPP_API_VERSION || 'v21.0' });
+    const web = modeOf(env) === 'web';
+    if (web && !deps.web) {
+      deps.web = createWhatsAppWeb({
+        sessionDir: path.join(dataDir, 'wa-session'),
+        onMessage: (m) => deps.agent.handleInbound(m),
+        onHumanReply: (phone, text) => deps.agent.recordHumanReply(phone, text),
+      });
+      deps.web.start();
+    } else if (!web && deps.web) {
+      deps.web.stop();
+      deps.web = null;
+    }
+    deps.wa = web ? deps.web : createWhatsApp({ token: env.WHATSAPP_TOKEN, phoneNumberId: env.WHATSAPP_PHONE_NUMBER_ID, apiVersion: env.WHATSAPP_API_VERSION || 'v21.0' });
+    const qr = findQr(mediaDirs);
     const rules = createRuleBrain({ business });
     const brain = env.ANTHROPIC_API_KEY
       ? createClaudeBrain({ business, apiKey: env.ANTHROPIC_API_KEY, model: env.CLAUDE_MODEL || 'claude-opus-5-5', effort: env.CLAUDE_EFFORT || 'low' })
@@ -286,7 +332,9 @@ function main() {
       business,
       alertNumbers: (env.ALERT_NUMBERS || '').split(',').map((s) => s.replace(/\D/g, '')).filter(Boolean),
       template: { name: env.FOLLOWUP_TEMPLATE_NAME, lang: env.FOLLOWUP_TEMPLATE_LANG || 'en' },
-      paymentQrUrl: paymentQrUrl(env, hostedUrl(env) || state.tunnelUrl, mediaDirs),
+      // Linked devices send the QR straight from disk; the Cloud API needs a public link to it.
+      paymentQrUrl: web ? (qr ? `file://${qr}` : '') : paymentQrUrl(env, hostedUrl(env) || state.tunnelUrl, mediaDirs),
+      freeFormFollowups: web,
     });
   }
 
@@ -321,7 +369,8 @@ function main() {
 
   if (!env.DASHBOARD_TOKEN) state.setupCode = String(crypto.randomInt(100000, 1000000));
   console.log(`AI replies: ${env.ANTHROPIC_API_KEY ? env.CLAUDE_MODEL || 'claude-opus-5-5' : 'built-in (add a Claude key on the setup page for AI replies)'}`);
-  if (!env.WHATSAPP_TOKEN) console.log('WhatsApp is not connected yet: replies are only shown in this window.');
+  if (modeOf(env) === 'web') console.log('WhatsApp: linked device. Scan the QR code on the setup page to link your number.');
+  else if (!env.WHATSAPP_TOKEN) console.log('WhatsApp is not connected yet: replies are only shown in this window.');
 
   http.createServer(createApp(deps)).listen(port, () => {
     const local = `http://localhost:${port}`;

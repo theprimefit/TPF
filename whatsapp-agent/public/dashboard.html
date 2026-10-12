@@ -79,6 +79,7 @@
     <button id="server" hidden>Server</button>
     <button id="logout">Log out</button>
   </header>
+  <div class="banner" id="waBanner" hidden>⚠ WhatsApp is not linked, so the agent can't reply. <a href="/setup">Open setup</a> to scan the QR code.</div>
   <main>
     <div class="tiles" id="tiles"></div>
     <div class="pipeline" id="pipeline"></div>
@@ -143,6 +144,8 @@ $('temp').onchange = () => loadLeads();
 async function loadStats() {
   const s = await api('/api/stats');
   $('title').textContent = `${s.business} · WhatsApp Lead Agent`;
+  const linked = !s.whatsapp || s.whatsapp.state === 'connected';
+  $('waBanner').hidden = linked;
   $('tiles').innerHTML = [
     ['Total leads', s.total], ['New today', s.newToday], ['🔥 Hot', s.byTemp.hot || 0],
     ['Booked', s.byStage.booked], ['Won', s.byStage.won], ['Conversion', `${s.conversionRate}%`], ['Payments to verify', s.paymentsToVerify || 0], ['Needs a human', s.needsHuman],

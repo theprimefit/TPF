@@ -14,8 +14,8 @@ const HOUR = 3600000;
 const FOLLOWUPS = [
   { after: 2 * HOUR, text: (l) => `Hi${first(l)}, just checking, did you get a chance to look at this? Happy to answer any question 🙂` },
   { after: 5 * HOUR, text: (l, biz) => `${biz.offer ? `${biz.offer} ` : ''}Want me to book your doctor consultation${first(l)}? Call ${biz.phone} or book at ${biz.bookingLink}` },
-  { after: 3 * DAY, template: true },
-  { after: 7 * DAY, template: true },
+  { after: 3 * DAY, template: true, text: (l, biz) => `Hi${first(l)}, ${biz.agentName} here from ${biz.businessName} 🌿 Your doctor consultation is still available. Shall I help you book it? (Reply STOP to stop messages.)` },
+  { after: 7 * DAY, template: true, text: (l, biz) => `Hi${first(l)}, one last check from ${biz.businessName}. Whenever you're ready to start your weight loss program, just reply here 🙏` },
 ];
 
 function first(lead) {
@@ -35,7 +35,8 @@ function inBusinessHours(biz, now = new Date()) {
   return h.days.includes(day) && hm >= h.start && hm < h.end;
 }
 
-function createAgent({ store, wa, brain, fallbackBrain, business, alertNumbers = [], template = {}, paymentQrUrl = '', log = console }) {
+// freeFormFollowups: linked-device WhatsApp has no 24-hour rule, so later follow-ups are plain messages.
+function createAgent({ store, wa, brain, fallbackBrain, business, alertNumbers = [], template = {}, paymentQrUrl = '', freeFormFollowups = false, log = console }) {
   const queues = new Map(); // phone → promise chain, so one lead is handled in order
 
   function enqueue(phone, fn) {
@@ -165,6 +166,15 @@ function createAgent({ store, wa, brain, fallbackBrain, business, alertNumbers =
     return store.getLead(phone);
   }
 
+  // The team replied from the WhatsApp phone itself: log it and let them handle the chat.
+  function recordHumanReply(phone, text) {
+    const lead = store.getLead(phone);
+    if (!lead) return;
+    store.addMessage(phone, { dir: 'out', by: 'human', text });
+    if (!lead.botPaused) store.updateLead(phone, { botPaused: true, handoffReason: 'Team replied from the phone' });
+    store.save();
+  }
+
   async function runFollowups(now = Date.now()) {
     if (!inBusinessHours(business, new Date(now))) return 0;
     let sent = 0;
@@ -176,7 +186,7 @@ function createAgent({ store, wa, brain, fallbackBrain, business, alertNumbers =
       const quiet = now - Date.parse(lead.lastInboundAt);
       if (quiet < step.after) continue;
       try {
-        if (step.template || quiet >= 23 * HOUR) {
+        if (!freeFormFollowups && (step.template || quiet >= 23 * HOUR)) {
           // Outside WhatsApp's 24-hour window only approved templates are allowed.
           if (!template.name) {
             store.updateLead(lead.phone, { followupsSent: (lead.followupsSent || 0) + 1 });
@@ -198,7 +208,7 @@ function createAgent({ store, wa, brain, fallbackBrain, business, alertNumbers =
     return sent;
   }
 
-  return { handleInbound, sendManual, runFollowups, rescore };
+  return { handleInbound, sendManual, runFollowups, rescore, recordHumanReply };
 }
 
 module.exports = { createAgent, inBusinessHours, FOLLOWUPS };

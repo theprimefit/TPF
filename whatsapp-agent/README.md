@@ -22,17 +22,32 @@ An all-in-one WhatsApp sales agent for **Hindivine Healthcare's 3-month weight l
 | **Compliance** | `STOP` opts a lead out (`START` opts back in), webhook signatures are verified, repeated webhook deliveries are ignored, and only templates are sent outside the 24-hour window. |
 | **Dashboard** | Stats, pipeline, search and filters, full chat, reply box, notes, stage changes, pause/resume bot and CSV export. Works on phones. |
 
+## Two ways to connect WhatsApp
+
+| | **Linked device** (scan a QR, like WhatsApp Web) | **Official Cloud API** |
+| --- | --- | --- |
+| Setup | Minutes: scan a QR code with the business phone | Meta business verification, app, token, webhook |
+| Number | Your existing WhatsApp number keeps working on the phone | Number moves to the API |
+| Follow-ups | Any time (no 24-hour rule) | Approved template after 24 hours |
+| Buttons | Shown as a numbered list ("reply 1, 2 or 3") | Real tap buttons |
+| Public link | Not needed | Needed (tunnel or server) |
+| Risk | **Unofficial.** WhatsApp may restrict or ban numbers it sees as automated | Official and safe for business |
+
+Choose on the setup page under **How WhatsApp connects**. In linked-device mode the agent only answers people who message first, shows "typing…" and paces replies like a person, never sends bulk messages, and pauses itself on a chat when your team replies from the phone. The phone must stay on and online every few days to keep the link alive. Using a separate number for the bot lowers the risk to your main number.
+
 ## Easiest ways to run it
 
 ### A. On your own computer (free, quickest to try)
 
 1. Install **Node.js LTS** from [nodejs.org](https://nodejs.org).
 2. Download this folder and double-click **`Start-Windows.bat`** (Windows) or **`Start-Mac.command`** (Mac; the first time, right-click → Open). On Linux run `./start-linux.sh`.
-3. Your browser opens the **setup page**. Enter the 6-digit setup code shown in the black window, choose a dashboard password, then fill in the WhatsApp details and upload the QR code. Everything is saved and applied immediately.
-4. **Public link:** WhatsApp needs an internet address that reaches your computer. On the setup page choose:
+3. Your browser opens the **setup page**. Enter the 6-digit setup code shown in the black window and choose a dashboard password.
+   - **Linked device:** keep *How WhatsApp connects* on **Linked device**, then scan the QR code shown on the page from the business phone (WhatsApp → Linked devices → Link a device). Upload the UPI QR image. That's it: steps 4 and 5 below are only for the Cloud API.
+   - **Cloud API:** choose it, fill in the WhatsApp details and upload the UPI QR image. Everything is saved and applied immediately.
+4. **Public link (Cloud API only):** WhatsApp needs an internet address that reaches your computer. On the setup page choose:
    - **ngrok** (recommended): free account at [ngrok.com](https://ngrok.com), install ngrok, claim your free fixed domain, and enter the domain and authtoken. The link never changes.
    - **Cloudflare**: install `cloudflared` (`winget install --id Cloudflare.cloudflared` or `brew install cloudflared`). No account needed, but the link changes on every restart, so you must paste the new webhook URL into Meta each time.
-5. Copy the **Callback URL** and **Verify token** from the setup page into Meta (WhatsApp → Configuration → Webhook), then press **Send test message**.
+5. **(Cloud API only)** Copy the **Callback URL** and **Verify token** from the setup page into Meta (WhatsApp → Configuration → Webhook), then press **Send test message**.
 
 Keep the computer on and awake, with the window open: the agent stops when it does.
 
