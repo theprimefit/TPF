@@ -1,15 +1,30 @@
 {
   "businessName": "Hindivine Healthcare",
   "agentName": "Riya",
-  "phone": "+91 8889995465",
+  "phone": "+91 89208 31975 / +91 8889995465",
   "website": "https://www.drrajatgoel.com",
   "bookingLink": "https://www.drrajatgoel.com",
   "paymentLink": "",
   "timezone": "Asia/Kolkata",
-  "businessHours": { "start": "09:00", "end": "20:00", "days": [1, 2, 3, 4, 5, 6] },
-  "languages": ["English", "Hindi", "Hinglish"],
-  "pitch": "3-month clinically supervised weight loss programs with a weekly weight loss injection, run by our doctor and dietitians.",
-  "consultation": "a consultation with our doctor, who checks your health and reports and confirms which program is safe and right for you",
+  "businessHours": {
+    "start": "09:00",
+    "end": "20:00",
+    "days": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ]
+  },
+  "languages": [
+    "English",
+    "Hindi",
+    "Hinglish"
+  ],
+  "pitch": "GLP-1 Weight Management Program: 3-month doctor-supervised, personalised weight loss programs with a weekly GLP-1 injection, led by Dr. Rajat Goel (gold medalist bariatric & metabolic surgeon, 1,300+ patients across India). 100% genuine injections. Available across India, online or at the clinic.",
+  "consultation": "a consultation with Dr. Rajat Goel's team (online or clinic visit). The consultation fee is ₹1,000 and is 100% adjusted against the 3-month program if you enroll. The doctor checks your health, lifestyle, goals and suitability and confirms which program is right for you",
   "services": [
     {
       "name": "3-Month Ozempic (semaglutide) Program",
@@ -28,34 +43,111 @@
     }
   ],
   "included": [
-    "Weight loss injection for 3 months",
-    "Expert dietitian support",
-    "Weekly online group meeting with the doctor",
-    "Dose escalation and safety monitoring",
+    "Weekly GLP-1 weight loss injection (100% genuine) for 3 months",
+    "Doctor consultations and regular follow-ups",
+    "Personalised diet plan by expert dietitians",
+    "Weekly progress monitoring, dose escalation and safety monitoring",
     "Lifestyle and exercise guidance",
-    "Hindivine App access (diet plan, workouts, recipes, progress tracking, reminders, chat)",
-    "Kit: Hindivine cooling pouch, ice pack, alcohol swabs and pen needles"
+    "Weight and inch loss tracking",
+    "WhatsApp support and guidance, and weekly online group meeting with the doctor",
+    "Hindivine App access (diet plan, workouts, recipes, progress, reminders, chat)",
+    "Kit: injection pens, pen needles, premium whey protein, alcohol swabs, ice gel pack, premium pouch and instruction guide (kit contents may vary as per the doctor's recommendation)"
   ],
   "faqs": [
-    { "q": "Do I need a prescription?", "a": "Yes. These are prescription medicines. Our doctor reviews your health and reports first and only then confirms the program." },
-    { "q": "Which injection is right for me?", "a": "The doctor decides after your consultation, based on your weight, health conditions and reports." },
-    { "q": "How often is the injection?", "a": "Once a week. The doctor starts at a low dose and increases it step by step while monitoring you." },
-    { "q": "Are there side effects?", "a": "Some people get nausea, an upset stomach or reduced appetite, especially early on. The doctor monitors you every week and adjusts the dose. Ask the doctor about anything specific to you." },
-    { "q": "How much weight will I lose?", "a": "It varies from person to person. We never promise a fixed number; the doctor will set realistic goals with you." },
-    { "q": "Is it online?", "a": "Yes. The consultation, weekly doctor meetings and dietitian support are online, and the kit is delivered to you." }
+    {
+      "q": "What is the consultation fee?",
+      "a": "₹1,000, and it is 100% adjusted against the 3-month program fee when you enroll."
+    },
+    {
+      "q": "Is the program supervised by a doctor?",
+      "a": "Yes. It is led by Dr. Rajat Goel with weekly follow-ups and safety monitoring."
+    },
+    {
+      "q": "Is online consultation available?",
+      "a": "Yes, you can choose an online consultation or a clinic visit. Clinic details are shared after the appointment is confirmed."
+    },
+    {
+      "q": "Will I get a personalised diet plan?",
+      "a": "Yes, from our expert dietitians, plus lifestyle and exercise guidance."
+    },
+    {
+      "q": "Are follow-ups included?",
+      "a": "Yes, weekly follow-ups, progress tracking and plan changes are included."
+    },
+    {
+      "q": "How long is the program?",
+      "a": "3 months."
+    },
+    {
+      "q": "Do I need a prescription?",
+      "a": "Yes. These are prescription medicines. The doctor reviews your health first and only then confirms the program."
+    },
+    {
+      "q": "Which injection is right for me?",
+      "a": "The doctor decides after your consultation, based on your weight, health conditions and reports."
+    },
+    {
+      "q": "How often is the injection?",
+      "a": "Once a week. The doctor starts at a low dose and increases it step by step while monitoring you."
+    },
+    {
+      "q": "Are there side effects?",
+      "a": "Some people get nausea, an upset stomach or reduced appetite, especially early on. The doctor monitors you every week and adjusts the dose."
+    },
+    {
+      "q": "How much weight will I lose?",
+      "a": "Results vary from person to person. We never promise a fixed number; the doctor sets realistic goals with you."
+    }
   ],
   "offer": "Limited period offer: save up to ₹20,000 on the 3-month programs.",
   "qualifyingQuestions": [
     "current weight and height (to check eligibility)",
-    "age",
+    "age and gender",
     "diabetes, thyroid, BP or any other condition, and current medicines",
-    "which program they are interested in (Ozempic, Wegovy or Mounjaro)",
-    "when they want to start"
+    "city, and online consultation or clinic visit",
+    "which program they are interested in (Ozempic, Wegovy or Mounjaro)"
   ],
   "rules": [
     "These are prescription medicines. Never say a medicine is safe or right for the lead, never suggest a dose, and never promise a fixed amount of weight loss. The doctor decides everything medical after the consultation.",
-    "Never invent prices, offers or services that are not listed.",
+    "Never invent prices, offers, refund terms or services that are not listed. If asked whether the consultation fee is refundable, say the team will confirm and hand over to a human.",
     "Hand over to the doctor (action handoff) if the lead is pregnant, planning pregnancy or breastfeeding, is under 18, has type 1 diabetes, a history of pancreatitis, medullary thyroid cancer or MEN2, an eating disorder, reports a side effect, or asks a detailed medical question.",
-    "Hand over to a human if the lead is angry or asks for a refund."
-  ]
+    "Hand over to a human if the lead is angry or asks for a refund.",
+    "Never say a payment has been received or a slot is confirmed; the team verifies payments and confirms slots."
+  ],
+  "email": "info@hindivinehealthcare.com",
+  "doctor": {
+    "name": "Dr. Rajat Goel",
+    "credentials": "Gold medalist; bariatric, robotic and metabolic surgeon (MBBS, MS, DNB, FAIS, FACS, FMAS, FIAGES, FALS and more)",
+    "expertise": [
+      "Medical weight management",
+      "Obesity and metabolic disorders",
+      "Bariatric and robotic surgery",
+      "Allurion balloon program",
+      "Long-term weight maintenance"
+    ],
+    "trust": "1,300+ patients across India"
+  },
+  "consultationFee": "₹1,000",
+  "payment": {
+    "upiId": "paytm.s1k1ukl@pty",
+    "payeeName": "Hindivine Healthcare",
+    "qrImage": "upi-qr.jpg",
+    "instructions": "Pay the ₹1,000 consultation fee by scanning the QR or paying to UPI ID paytm.s1k1ukl@pty (Paytm, PhonePe, Google Pay, BHIM, any UPI app), then send the payment screenshot here. Our team confirms your consultation slot after verifying the payment."
+  },
+  "steps": [
+    "Consultation & assessment",
+    "Personalised plan (injection, diet, exercise, coaching)",
+    "Start your journey with full support",
+    "Weekly follow-ups, tracking and plan optimisation",
+    "Sustainable results and long-term habits"
+  ],
+  "whoCanBenefit": [
+    "BMI above the recommended range",
+    "Struggling to lose weight",
+    "Frequent hunger or cravings",
+    "Weight regain after dieting",
+    "Weight-related health issues",
+    "Looking for a medically supervised solution"
+  ],
+  "clinic": "Clinic address details are shared after the appointment is confirmed."
 }

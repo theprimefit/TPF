@@ -42,6 +42,7 @@ function scoreLead(lead, now = Date.now()) {
   add(INTENT_POINTS[lead.profile?.intent] || 0, `AI intent ${lead.profile?.intent}`);
   add(STAGE_POINTS[lead.stage] || 0, `stage ${lead.stage}`);
   if (lead.source && lead.source !== 'organic') add(5, 'came from an ad');
+  add({ requested: 10, to_verify: 20, paid: 30 }[lead.paymentStatus] || 0, `payment ${lead.paymentStatus}`);
 
   if (lead.lastInboundAt) {
     const days = (now - Date.parse(lead.lastInboundAt)) / 86400000;

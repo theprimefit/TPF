@@ -4,7 +4,7 @@
 // { reply, buttons[], profile{}, intent, action, handoffReason, summary }
 const Anthropic = require('@anthropic-ai/sdk');
 
-const PROFILE_FIELDS = ['name', 'goal', 'currentWeight', 'targetWeight', 'height', 'age', 'condition', 'medicines', 'preferredProgram', 'diet', 'startWhen', 'city', 'language'];
+const PROFILE_FIELDS = ['name', 'goal', 'currentWeight', 'targetWeight', 'height', 'age', 'gender', 'condition', 'medicines', 'preferredProgram', 'consultMode', 'diet', 'startWhen', 'city', 'language'];
 const ACTIONS = ['none', 'book_call', 'send_payment', 'handoff', 'mark_lost'];
 
 const OUTPUT_SCHEMA = {
@@ -37,8 +37,11 @@ function systemPrompt(biz) {
 About the business: ${biz.pitch}
 Phone: ${biz.phone || 'n/a'}
 Website / booking: ${biz.bookingLink}
-${biz.paymentLink ? `Payment link: ${biz.paymentLink}` : 'There is no payment link; the team shares payment details after the consultation.'}
-First step for every lead: ${biz.consultation || 'a consultation'}.
+${biz.email ? `Email: ${biz.email}\n` : ''}${biz.doctor ? `Doctor: ${biz.doctor.name}, ${biz.doctor.credentials}. Expertise: ${biz.doctor.expertise.join(', ')}. Trusted by ${biz.doctor.trust}.\n` : ''}First step for every lead: ${biz.consultation || 'a consultation'}.
+${biz.payment ? `How to pay the consultation fee: ${biz.payment.instructions} (The QR code image is sent automatically when you set action send_payment.)` : 'The team shares payment details after the consultation.'}
+${biz.clinic || ''}
+${biz.steps ? `How the program works: ${biz.steps.map((x, i) => `${i + 1}. ${x}`).join(' → ')}` : ''}
+${biz.whoCanBenefit ? `Who can benefit: ${biz.whoCanBenefit.join('; ')}.` : ''}
 Current offer: ${biz.offer || 'none'}
 
 Programs and prices (the only ones you may quote):
@@ -55,7 +58,7 @@ How to talk on WhatsApp:
 - Keep each message short: 1-3 sentences, at most one question. Use the lead's name once you know it. One emoji at most. Use a short list only when quoting the programs or what's included.
 - Answer their question first, then move one step forward. Learn naturally, one at a time: ${biz.qualifyingQuestions.join('; ')}.
 - You may explain all programs, prices and what's included, and say which one the lead is asking about. Do not pick a medicine for them: the doctor confirms the right program after the consultation.
-- When they show buying intent (asking how to join, pay or start), make it easy: give the phone number and booking link${biz.paymentLink ? ' or payment link' : ''} and set action accordingly.
+- When they show buying intent (asking how to join, book, pay or start), make it easy: explain the consultation fee and that it is fully adjusted against the program, ask online or clinic visit, give the UPI payment details and ask for the screenshot, and set action send_payment.
 - Handle objections with empathy and facts (price: break it down per day (price ÷ 90 days) and remind them it includes the medicine, doctor, dietitian and app, mention the offer; fear of injections: it's once a week with a small pen needle; trust: doctor-supervised with weekly monitoring).
 - Offer 2-3 quick-reply buttons when it helps them answer with one tap (for example "Book consultation", "What's included?", "Prices").
 ${biz.rules.map((r) => `- ${r}`).join('\n')}
@@ -63,7 +66,7 @@ ${biz.rules.map((r) => `- ${r}`).join('\n')}
 Fields:
 - profile: carry forward what the CRM already knows and add anything new from the conversation (preferredProgram = Ozempic, Wegovy or Mounjaro if they named one).
 - intent: high = wants to buy or book now; medium = interested, asking details or price; low = just browsing or hesitant.
-- action: book_call when you share the booking details and they want a consultation; send_payment when you send payment details; handoff when a doctor or human must take over (say so kindly in reply and give handoffReason); mark_lost when they clearly decline or ask not to be contacted; otherwise none.`;
+- action: send_payment when you give the consultation fee payment details; book_call when you share booking details without payment details; handoff when a doctor or human must take over (say so kindly in reply and give handoffReason); mark_lost when they clearly decline or ask not to be contacted; otherwise none.`;
 }
 
 // Turn stored messages into alternating user/assistant turns.
@@ -166,7 +169,7 @@ function createRuleBrain({ business }) {
   const first = (name) => (name ? ` ${name.split(' ')[0]}` : '');
   const programs = business.services.map((s) => `• ${s.name}: ${s.price}`).join('\n');
   const included = business.included.map((i) => `✓ ${i}`).join('\n');
-  const contact = `Call ${business.phone} or book at ${business.bookingLink}`;
+  const contact = `Call/WhatsApp ${business.phone} or visit ${business.bookingLink}`;
 
   return async function decide(lead) {
     const inbound = lead.messages.filter((m) => m.dir === 'in');
@@ -190,16 +193,36 @@ function createRuleBrain({ business }) {
     } else if (/\b(not interested|no thanks|don't message|dont message)\b/i.test(text)) {
       out.reply = `No problem${n}, thank you for your time. Message us anytime if you'd like help with weight loss.`;
       out.action = 'mark_lost';
-    } else if (/\b(book|join|start|pay|interested|ready|enrol|sign ?up|consult\w*|lena hai)\b/i.test(text)) {
-      out.reply = `Great${n}! The first step is ${business.consultation}.\n${contact}\n${business.offer || ''}`.trim();
+    } else if (business.consultationFee && /\b(consult\w* (fees?|charges?)|fees? for (the )?consult\w*|refund\w*)\b/i.test(text)) {
+      if (/refund/i.test(text)) {
+        out.reply = `Good question${n}. Our team will confirm that for you personally, they'll message you shortly 🙏`;
+        out.action = 'handoff';
+        out.handoffReason = 'Asked about refunds';
+      } else {
+        out.reply = `${hello}The consultation fee is ${business.consultationFee}, and it's 100% adjusted against the 3-month program if you enroll. Shall I share the payment details to book it?`;
+        out.buttons = ['Book consultation', 'Prices'];
+        out.intent = 'medium';
+      }
+    } else if (/\b(online|clinic|visit)\b/i.test(text) && lead.paymentStatus === 'requested') {
+      out.profile.consultMode = /clinic|visit/i.test(text) ? 'Clinic visit' : 'Online';
+      out.reply = `Noted, ${out.profile.consultMode.toLowerCase()}${n}. Once you've paid, please send the payment screenshot here and our team will confirm your slot.${out.profile.consultMode === 'Clinic visit' && business.clinic ? ` ${business.clinic}` : ''}`;
       out.intent = 'high';
-      out.action = 'book_call';
+    } else if (/\b(book|join|start|pay|interested|ready|enrol|sign ?up|consult\w*|lena hai)\b/i.test(text)) {
+      if (business.payment) {
+        out.reply = `Great${n}! The first step is ${business.consultation}.\n\n${business.payment.instructions}\n\nWould you like an online consultation or a clinic visit?`;
+        out.buttons = ['Online consultation', 'Clinic visit'];
+        out.action = 'send_payment';
+      } else {
+        out.reply = `Great${n}! The first step is ${business.consultation}.\n${contact}\n${business.offer || ''}`.trim();
+        out.action = 'book_call';
+      }
+      out.intent = 'high';
     } else if (/\b(include\w*|kit|what do i get|kya milega|details?)\b/i.test(text)) {
       out.reply = `${hello}Every 3-month program includes:\n${included}\n\nWant to book your doctor consultation?`;
       out.buttons = ['Book consultation', 'Prices'];
       out.intent = 'medium';
     } else if (/\b(price|cost|fee|fees|charges?|kitna|kitne|plans?|programs?|package|ozempic|wegovy|mounjaro|injection)\b/i.test(text)) {
-      out.reply = `${hello}Our 3-month weight loss programs:\n${programs}\n\nAll include the weekly injection, doctor and dietitian support, safety monitoring, the app and the kit. Our doctor confirms which one suits you after a health check.\n${business.offer || ''}`.trim();
+      out.reply = `${hello}Our 3-month weight loss programs:\n${programs}\n\nAll include the weekly injection, doctor and dietitian support, safety monitoring, the app and the kit. Our doctor confirms which one suits you after a health check.${business.consultationFee ? ` Consultation fee ${business.consultationFee}, fully adjusted against the program.` : ''}\n${business.offer || ''}`.trim();
       out.buttons = ['Book consultation', "What's included?"];
       out.intent = 'medium';
     } else if (!profile.currentWeight || !profile.height) {

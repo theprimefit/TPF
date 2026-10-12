@@ -20,15 +20,16 @@ function fakeWhatsApp() {
     sendText: async (to, text) => sent.push({ to, type: 'text', text }),
     sendButtons: async (to, text, buttons) => sent.push({ to, type: 'buttons', text, buttons }),
     sendTemplate: async (to, name, lang, params) => sent.push({ to, type: 'template', name, params }),
+    sendImage: async (to, link, caption) => sent.push({ to, type: 'image', link, text: caption }),
     markRead: async () => {},
   };
 }
 
-function setup({ brain, alertNumbers = ['919999999999'], template = { name: 'lead_followup', lang: 'en' } } = {}) {
+function setup({ brain, alertNumbers = ['919999999999'], template = { name: 'lead_followup', lang: 'en' }, paymentQrUrl = 'https://example.com/media/upi-qr.jpg' } = {}) {
   const store = createStore(null);
   const wa = fakeWhatsApp();
   const rules = createRuleBrain({ business });
-  const agent = createAgent({ store, wa, brain: brain || rules, fallbackBrain: rules, business, alertNumbers, template, log: quiet });
+  const agent = createAgent({ store, wa, brain: brain || rules, fallbackBrain: rules, business, alertNumbers, template, paymentQrUrl, log: quiet });
   let n = 0;
   const say = (text, extra = {}) => agent.handleInbound({ id: `m${++n}`, from: '919800000001', name: 'Priya Sharma', type: 'text', text, ...extra });
   return { store, wa, agent, say };
@@ -88,13 +89,34 @@ test('rule-based flow qualifies a lead, quotes the 3 programs and books a consul
   );
   assert.equal(lead.stage, 'qualified');
 
+  await say('consultation fees kitna hai?');
+  assert.match(toLead(wa).at(-1).text, /₹1,000.*100% adjusted/);
+
   await say('ok I want to book');
   lead = store.getLead('919800000001');
+  assert.equal(lead.paymentStatus, 'requested');
+  const [instructions, qr] = toLead(wa).slice(-2);
+  assert.ok(instructions.text.includes(business.payment.upiId));
+  assert.match(instructions.text, /₹1,000/);
+  assert.deepEqual(instructions.buttons, ['Online consultation', 'Clinic visit']);
+  assert.equal(qr.type, 'image');
+  assert.equal(qr.link, 'https://example.com/media/upi-qr.jpg');
+  assert.ok(wa.sent.some((m) => m.to === '919999999999' && /Payment details sent/.test(m.text)));
+
+  await say('Online consultation');
+  lead = store.getLead('919800000001');
+  assert.equal(lead.profile.consultMode, 'Online');
+  assert.equal(lead.paymentStatus, 'requested', 'mode answer does not restart payment');
+  assert.match(toLead(wa).at(-1).text, /screenshot/);
+
+  await say('[image]', { type: 'image' });
+  lead = store.getLead('919800000001');
+  assert.equal(lead.paymentStatus, 'to_verify');
   assert.equal(lead.stage, 'booked');
-  assert.ok(toLead(wa).at(-1).text.includes(business.phone));
-  assert.ok(toLead(wa).at(-1).text.includes(business.bookingLink));
+  assert.match(toLead(wa).at(-1).text, /verify/);
+  assert.doesNotMatch(toLead(wa).at(-1).text, /confirmed/i, 'bot never confirms payment itself');
   assert.equal(lead.temperature, 'hot');
-  assert.ok(wa.sent.some((m) => m.to === '919999999999' && /Priya/.test(m.text)), 'team alert sent');
+  assert.ok(wa.sent.some((m) => m.to === '919999999999' && /Payment to verify/.test(m.text) && /Priya/.test(m.text)));
 });
 
 test('medical red flags go to the doctor even when Claude would keep selling', async () => {
@@ -278,6 +300,12 @@ test('HTTP: webhook verification, signature check and protected API', async (t) 
   assert.equal(lead.stage, 'won');
   assert.equal(lead.notes, 'paid');
   assert.notEqual(lead.score, 999, 'score is not writable');
+  res = await fetch(`${base}/api/leads/911`, { method: 'PATCH', headers: auth, body: JSON.stringify({ paymentStatus: 'paid' }) });
+  assert.equal((await res.json()).paymentStatus, 'paid');
+  res = await fetch(`${base}/api/leads/911`, { method: 'PATCH', headers: auth, body: JSON.stringify({ paymentStatus: 'free' }) });
+  assert.equal(res.status, 400);
+  res = await fetch(`${base}/media/..%2Fserver.js`);
+  assert.equal(res.status, 404);
   res = await fetch(`${base}/api/leads/911`, { method: 'PATCH', headers: auth, body: JSON.stringify({ stage: 'bogus' }) });
   assert.equal(res.status, 400);
 

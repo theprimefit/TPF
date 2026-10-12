@@ -1,6 +1,6 @@
 # WhatsApp Lead Agent
 
-An all-in-one WhatsApp sales agent for **Hindivine Healthcare's 3-month weight loss programs** (Ozempic ₹19,999 · Wegovy ₹19,999 · Mounjaro ₹29,999). It answers every lead instantly, checks eligibility details, quotes the programs, books the doctor consultation, follows up with leads who go quiet, and alerts the team when a lead is hot. Everything is tracked in a small CRM dashboard.
+An all-in-one WhatsApp sales agent for **Hindivine Healthcare's 3-month weight loss programs** (Ozempic ₹19,999 · Wegovy ₹19,999 · Mounjaro ₹29,999). Led by Dr. Rajat Goel. It answers every lead instantly, checks eligibility details, quotes the programs, collects the ₹1,000 consultation fee by UPI (fully adjusted against enrollment), follows up with leads who go quiet, and alerts the team when a lead is hot. Everything is tracked in a small CRM dashboard.
 
 ![Dashboard](docs/dashboard.png)
 
@@ -11,6 +11,7 @@ An all-in-one WhatsApp sales agent for **Hindivine Healthcare's 3-month weight l
 | **Instant auto-reply, 24×7** | Every WhatsApp message gets a reply in seconds, in English, Hindi or Hinglish. Claude writes the replies; without an API key a built-in rule-based sales flow runs instead (and takes over automatically if Claude is ever unavailable). |
 | **Qualifies like a salesperson** | Asks one question at a time: weight and height, age, conditions and medicines, preferred program, start date. Uses quick-reply buttons so leads answer with one tap. |
 | **Converts** | Quotes the three programs and what the kit includes from `config/business.json`, handles price, injection-fear and trust objections, mentions the offer, and sends the phone number and booking link as soon as the lead shows buying intent. It never invents prices or promises results. |
+| **Consultation fee by UPI** | When a lead wants to book, the agent explains the ₹1,000 fee (100% adjusted against the program), sends the UPI ID and the QR code image, and asks online consultation or clinic visit. When the lead sends a payment screenshot or says they've paid, the lead moves to *Booked*, is flagged **verify payment**, and the team is alerted. The bot never confirms a payment or a slot itself; the team marks the payment as paid in the dashboard. |
 | **Medical safety** | These are prescription medicines, so the agent never picks a medicine, suggests a dose or says it is safe for someone: the doctor decides after the consultation. Pregnancy or breastfeeding, under 18, type 1 diabetes, pancreatitis, thyroid cancer/MEN2, eating disorders and reported side effects are caught by a fixed check (not the AI), which hands the chat to the doctor and alerts the team. |
 | **Lead capture & source tracking** | Every number becomes a lead with name, profile, AI summary and full chat. Click-to-WhatsApp ad clicks are tagged with the ad headline. |
 | **Lead scoring (0–100)** | Hot / warm / cold, from profile completeness, buying and price words, urgency, AI-judged intent, stage, ad source and silence. The dashboard shows why each lead got its score. |
@@ -58,7 +59,11 @@ Set `ANTHROPIC_API_KEY`. The default model is `claude-opus-5-5` at `CLAUDE_EFFOR
 
 Edit `config/business.json`: agent name, phone, programs and prices, what's included, offer, FAQs, booking/payment links, business hours, languages and rules. Both Claude and the rule-based flow read it, so you never have to touch the code to change what the agent says.
 
-### 5. Team alerts
+### 5. UPI QR code
+
+The UPI ID is in `config/business.json` (`payment.upiId`). Save your Paytm QR image as `public/media/upi-qr.jpg` and set `PUBLIC_URL` to the server's HTTPS address, so WhatsApp can download it (or set `PAYMENT_QR_URL` to an image hosted elsewhere). Without either, payment messages carry the UPI ID only.
+
+### 6. Team alerts
 
 Put team WhatsApp numbers (with country code) in `ALERT_NUMBERS`. WhatsApp only delivers free-form messages to numbers that have messaged your business number in the last 24 hours, so each team member should message the business number once a day (or switch alerts to a template).
 
@@ -71,7 +76,7 @@ Open `/dashboard` and enter `DASHBOARD_TOKEN`. The same token works as a Bearer 
 | GET | `/api/stats` | Totals, conversion rate, counts by stage, temperature and source |
 | GET | `/api/leads?q=&stage=&temperature=` | Lead list (without full chats) |
 | GET | `/api/leads/:phone` | One lead with its full chat |
-| PATCH | `/api/leads/:phone` | Update `name`, `stage`, `notes`, `tags`, `botPaused` |
+| PATCH | `/api/leads/:phone` | Update `name`, `stage`, `notes`, `tags`, `botPaused`, `paymentStatus` (`requested`, `to_verify`, `paid`) |
 | POST | `/api/leads/:phone/send` | Send `{ "text": "..." }` as the team (pauses the bot unless `"pauseBot": false`) |
 | GET | `/api/export.csv` | All leads as CSV |
 

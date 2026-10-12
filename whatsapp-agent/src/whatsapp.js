@@ -41,6 +41,9 @@ function createWhatsApp({ token, phoneNumberId, apiVersion = 'v21.0', fetchImpl 
         },
       }),
 
+    // Image by public URL (used for the UPI QR code).
+    sendImage: (to, link, caption = '') => call({ to, type: 'image', image: { link, ...(caption ? { caption } : {}) } }),
+
     // Templates are the only messages allowed outside the 24-hour customer-service window.
     sendTemplate: (to, name, lang = 'en', bodyParams = []) =>
       call({

@@ -6,6 +6,7 @@ const { redFlag } = require('./brain');
 
 const OPT_OUT = /^\s*(stop|unsubscribe|band karo|cancel)\s*$/i;
 const OPT_IN = /^\s*(start|subscribe)\s*$/i;
+const PAID = /\b(paid|payment (done|sent|made|kar di|ho gaya|complete\w*)|done payment|transferred|sent (the )?(money|amount)|screenshot)\b/i;
 const DAY = 86400000;
 const HOUR = 3600000;
 
@@ -34,7 +35,7 @@ function inBusinessHours(biz, now = new Date()) {
   return h.days.includes(day) && hm >= h.start && hm < h.end;
 }
 
-function createAgent({ store, wa, brain, fallbackBrain, business, alertNumbers = [], template = {}, log = console }) {
+function createAgent({ store, wa, brain, fallbackBrain, business, alertNumbers = [], template = {}, paymentQrUrl = '', log = console }) {
   const queues = new Map(); // phone → promise chain, so one lead is handled in order
 
   function enqueue(phone, fn) {
@@ -99,6 +100,17 @@ function createAgent({ store, wa, brain, fallbackBrain, business, alertNumbers =
       store.updateLead(msg.from, { optedOut: false, botPaused: false, stage: 'engaged' });
     }
 
+    // Payment proof: never confirm it ourselves, hand it to the team to verify.
+    if (lead.paymentStatus === 'requested' && (['image', 'document'].includes(msg.type) || PAID.test(msg.text))) {
+      store.updateLead(msg.from, { paymentStatus: 'to_verify', stage: 'booked' });
+      if (!lead.botPaused) {
+        await send(lead, `Thank you${first(lead)}! 🙏 Our team will verify your payment and confirm your consultation slot shortly.`);
+      }
+      rescore(lead);
+      await alertTeam(store.getLead(msg.from), 'Payment to verify');
+      return store.save();
+    }
+
     if (lead.botPaused || lead.optedOut) {
       // A human owns this chat; just keep the CRM up to date.
       if (rescore(lead)) await alertTeam(lead, 'Hot lead (team chat)');
@@ -117,16 +129,22 @@ function createAgent({ store, wa, brain, fallbackBrain, business, alertNumbers =
       if (decision.profile.name && !lead.name) patch.name = decision.profile.name;
       if (decision.summary) patch.summary = decision.summary;
       if (decision.action === 'book_call') patch.stage = 'booked';
+      if (decision.action === 'send_payment' && !['to_verify', 'paid'].includes(lead.paymentStatus)) patch.paymentStatus = 'requested';
       if (decision.action === 'mark_lost') patch.stage = 'lost';
       if (decision.action === 'handoff') Object.assign(patch, { botPaused: true, handoffReason: decision.handoffReason || 'Requested by AI' });
       patch.profile.intent = decision.intent;
       store.updateLead(msg.from, patch);
       await send(lead, decision.reply, decision.buttons);
+      if (decision.action === 'send_payment' && paymentQrUrl && business.payment) {
+        await wa.sendImage(lead.phone, paymentQrUrl, `Scan & pay ${business.consultationFee || ''} · UPI ID ${business.payment.upiId}`.replace('  ', ' '));
+        store.addMessage(lead.phone, { dir: 'out', by: 'bot', text: `[UPI QR code: ${business.payment.upiId}]` });
+      }
     }
 
     const becameHot = rescore(lead);
     if (decision?.action === 'handoff') await alertTeam(store.getLead(msg.from), `Needs a human (${store.getLead(msg.from).handoffReason})`);
     else if (decision?.action === 'book_call') await alertTeam(lead, 'Consultation link sent');
+    else if (decision?.action === 'send_payment') await alertTeam(lead, 'Payment details sent');
     else if (becameHot) await alertTeam(lead, 'Hot lead');
     return store.save();
   }

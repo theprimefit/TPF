@@ -132,7 +132,7 @@ async function loadStats() {
   $('title').textContent = `${s.business} · WhatsApp Lead Agent`;
   $('tiles').innerHTML = [
     ['Total leads', s.total], ['New today', s.newToday], ['🔥 Hot', s.byTemp.hot || 0],
-    ['Booked', s.byStage.booked], ['Won', s.byStage.won], ['Conversion', `${s.conversionRate}%`], ['Needs a human', s.needsHuman],
+    ['Booked', s.byStage.booked], ['Won', s.byStage.won], ['Conversion', `${s.conversionRate}%`], ['Payments to verify', s.paymentsToVerify || 0], ['Needs a human', s.needsHuman],
   ].map(([k, v]) => `<div class="tile"><b>${esc(v)}</b><span>${esc(k)}</span></div>`).join('');
   $('pipeline').innerHTML = [['', 'All', s.total], ...STAGES.map((st) => [st, st[0].toUpperCase() + st.slice(1), s.byStage[st]])]
     .map(([st, label, n]) => `<button data-stage="${st}" class="${state.stage === st ? 'on' : ''}">${label} · ${n}</button>`).join('');
@@ -144,7 +144,7 @@ async function loadLeads() {
   state.leads = await api(`/api/leads?${p}`);
   $('list').innerHTML = state.leads.length ? state.leads.map((l) => `
     <div class="lead ${state.selected === l.phone ? 'sel' : ''}" data-phone="${esc(l.phone)}">
-      <div class="name">${esc(l.name || '+' + l.phone)}${l.botPaused && !l.optedOut ? '<span class="tag">👤 human</span>' : ''}${l.optedOut ? '<span class="tag">opted out</span>' : ''}</div>
+      <div class="name">${esc(l.name || '+' + l.phone)}${l.botPaused && !l.optedOut ? '<span class="tag">👤 human</span>' : ''}${l.optedOut ? '<span class="tag">opted out</span>' : ''}${l.paymentStatus === 'to_verify' ? '<span class="tag">⚠ verify payment</span>' : ''}${l.paymentStatus === 'paid' ? '<span class="tag">✓ paid</span>' : ''}</div>
       <div><span class="pill ${l.temperature}">${l.score}</span></div>
       <div class="meta">${esc(l.stage)} · ${esc(l.profile?.goal || l.source)} · ${ago(l.updatedAt)}</div>
       <div class="meta">${l.messageCount} msgs</div>
@@ -175,6 +175,7 @@ async function openLead(phone) {
       </div>
       <aside class="side">
         <label>Stage <select id="stage">${STAGES.map((s) => `<option ${s === l.stage ? 'selected' : ''}>${s}</option>`).join('')}</select></label>
+        <label>Consultation fee <select id="payment">${[['', 'not requested'], ['requested', 'requested'], ['to_verify', '⚠ verify screenshot'], ['paid', '✓ paid']].map(([v, t]) => `<option value="${v}" ${v === (l.paymentStatus || '') ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
         ${l.summary ? `<div><h3>AI summary</h3>${esc(l.summary)}</div>` : ''}
         <div><h3>Profile</h3><dl class="kv">
           <dt>Phone</dt><dd>+${esc(l.phone)}</dd>
@@ -191,6 +192,7 @@ async function openLead(phone) {
   const patch = async (body) => { await api(`/api/leads/${encodeURIComponent(phone)}`, { method: 'PATCH', body: JSON.stringify(body) }); refresh(); };
   $('toggleBot').onclick = () => patch({ botPaused: !l.botPaused });
   $('stage').onchange = (e) => patch({ stage: e.target.value });
+  $('payment').onchange = (e) => patch({ paymentStatus: e.target.value });
   $('saveNotes').onclick = () => patch({ notes: $('notes').value });
   $('sendBtn').onclick = async () => {
     const text = $('reply').value.trim();

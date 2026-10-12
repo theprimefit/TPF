@@ -65,6 +65,14 @@ function createApp({ env = process.env, business, store, wa, agent }) {
         return;
       }
 
+      // Public media (the UPI QR image WhatsApp downloads when we send it).
+      if (parts[0] === 'media' && parts.length === 2 && /^[\w.-]+\.(jpe?g|png|webp)$/i.test(parts[1])) {
+        const file = path.join(__dirname, '..', 'public', 'media', parts[1]);
+        if (!fs.existsSync(file)) return send(res, 404, { error: 'not found' });
+        res.writeHead(200, { 'Content-Type': `image/${parts[1].split('.').pop().replace('jpg', 'jpeg')}`, 'Cache-Control': 'public, max-age=3600' });
+        return res.end(fs.readFileSync(file));
+      }
+
       if (url.pathname === '/' || url.pathname === '/dashboard') return send(res, 200, dashboardHtml, 'text/html; charset=utf-8');
 
       if (parts[0] === 'api') {
@@ -103,9 +111,10 @@ function createApp({ env = process.env, business, store, wa, agent }) {
           }
           if (!parts[3] && req.method === 'PATCH') {
             const body = JSON.parse((await readBody(req)).toString() || '{}');
-            const allowed = ['name', 'stage', 'notes', 'tags', 'botPaused'];
+            const allowed = ['name', 'stage', 'notes', 'tags', 'botPaused', 'paymentStatus'];
             const patch = Object.fromEntries(Object.entries(body).filter(([k]) => allowed.includes(k)));
             if (patch.botPaused === false) patch.handoffReason = '';
+            if ('paymentStatus' in patch && !['', 'requested', 'to_verify', 'paid'].includes(patch.paymentStatus)) return send(res, 400, { error: 'bad paymentStatus' });
             store.updateLead(phone, patch);
             agent.rescore(store.getLead(phone));
             await store.save();
@@ -120,6 +129,18 @@ function createApp({ env = process.env, business, store, wa, agent }) {
       if (!res.headersSent) send(res, e.message.startsWith('unknown stage') ? 400 : 500, { error: e.message });
     }
   };
+}
+
+// Public URL of the UPI QR image: PAYMENT_QR_URL, or PUBLIC_URL + /media/<qrImage> when that file exists.
+function paymentQrUrl(env, business) {
+  if (env.PAYMENT_QR_URL) return env.PAYMENT_QR_URL;
+  const file = business.payment && business.payment.qrImage;
+  if (!file || !env.PUBLIC_URL) return '';
+  if (!fs.existsSync(path.join(__dirname, '..', 'public', 'media', file))) {
+    console.warn(`UPI QR image public/media/${file} not found: payment messages will carry the UPI ID only.`);
+    return '';
+  }
+  return `${env.PUBLIC_URL.replace(/\/$/, '')}/media/${file}`;
 }
 
 function main() {
@@ -140,6 +161,7 @@ function main() {
     business,
     alertNumbers: (env.ALERT_NUMBERS || '').split(',').map((s) => s.replace(/\D/g, '')).filter(Boolean),
     template: { name: env.FOLLOWUP_TEMPLATE_NAME, lang: env.FOLLOWUP_TEMPLATE_LANG || 'en' },
+    paymentQrUrl: paymentQrUrl(env, business),
   });
 
   if (!env.DASHBOARD_TOKEN) console.warn('DASHBOARD_TOKEN is not set: the dashboard API is locked.');
