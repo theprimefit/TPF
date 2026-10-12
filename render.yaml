@@ -1,0 +1,22 @@
+# One-click deploy of the WhatsApp lead agent (whatsapp-agent/) on Render.
+# Settings, leads and the uploaded QR live on the persistent disk at /var/data.
+services:
+  - type: web
+    name: hindivine-whatsapp-agent
+    runtime: node
+    rootDir: whatsapp-agent
+    plan: starter
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    healthCheckPath: /health
+    disk:
+      name: agent-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: DATA_FILE
+        value: /var/data/leads.json
+      - key: SETTINGS_FILE
+        value: /var/data/settings.env
+      - key: NODE_VERSION
+        value: "20"

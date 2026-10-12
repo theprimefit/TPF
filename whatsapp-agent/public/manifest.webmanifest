@@ -1,0 +1,14 @@
+{
+  "name": "Hindivine Lead Agent",
+  "short_name": "Leads",
+  "description": "WhatsApp leads, chats and payments for Hindivine Healthcare.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f2f4fa",
+  "theme_color": "#1b2a6b",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Setup</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#1b2a6b">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<style>
+  :root { --bg:#f2f4fa; --card:#fff; --text:#141b38; --muted:#5f6886; --line:#dfe3ee; --brand:#1b2a6b; --accent:#2557d6; --ok:#0f8a5f; --ok-soft:#dff4ea; --warn:#9a5b00; --warn-soft:#fff2d9; --err:#c2321f; --field:#fff; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0e1222; --card:#171d33; --text:#e7eaf6; --muted:#9aa2c0; --line:#2a3254; --brand:#b4c1ff; --accent:#7f9dff; --ok:#4fd1a0; --ok-soft:#133a2d; --warn:#f2c26b; --warn-soft:#3a2d12; --err:#ff8371; --field:#10162a; color-scheme: dark; } }
+  * { box-sizing:border-box; }
+  [hidden] { display:none !important; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  main { max-width:860px; margin:0 auto; padding:20px 16px 60px; display:flex; flex-direction:column; gap:16px; }
+  header { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; }
+  h1 { margin:0; font-size:24px; color:var(--brand); }
+  h2 { margin:0 0 4px; font-size:17px; }
+  p { margin:0; }
+  .muted { color:var(--muted); font-size:13.5px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:12px; }
+  a { color:var(--accent); }
+  button, input, select { font:inherit; color:inherit; }
+  button { border:1px solid var(--line); background:var(--card); border-radius:9px; padding:8px 14px; cursor:pointer; font-weight:600; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button:disabled { opacity:.6; cursor:progress; }
+  input, select { width:100%; border:1px solid var(--line); background:var(--field); border-radius:9px; padding:9px 11px; }
+  input:focus-visible, select:focus-visible, button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  label { display:flex; flex-direction:column; gap:4px; font-weight:600; font-size:14px; }
+  label small { font-weight:400; color:var(--muted); font-size:12.5px; }
+  .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+  @media (max-width:640px) { .grid { grid-template-columns:minmax(0,1fr); } }
+  .steps { list-style:none; margin:0; padding:0; display:grid; gap:6px; }
+  .steps li { display:flex; gap:10px; align-items:center; font-size:14.5px; }
+  .dot { width:22px; height:22px; border-radius:50%; display:grid; place-items:center; font-size:12px; font-weight:700; flex:none; background:var(--line); color:var(--muted); }
+  .done .dot { background:var(--ok); color:#fff; }
+  .opt { color:var(--muted); font-size:12.5px; }
+  .copy { display:flex; gap:8px; align-items:center; }
+  .copy code { flex:1; min-width:0; overflow-wrap:anywhere; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:8px 10px; font:13px ui-monospace,Menlo,monospace; }
+  .msg { border-radius:9px; padding:9px 12px; font-size:14px; }
+  .msg.ok { background:var(--ok-soft); color:var(--ok); }
+  .msg.err { background:var(--warn-soft); color:var(--warn); }
+  .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .row input { flex:1; min-width:180px; width:auto; }
+  .qr { display:flex; gap:14px; align-items:center; flex-wrap:wrap; }
+  .qr img { width:120px; height:120px; object-fit:contain; background:#fff; border-radius:10px; border:1px solid var(--line); }
+  .noqr { width:120px; height:120px; border:1px dashed var(--line); border-radius:10px; display:grid; place-items:center; color:var(--muted); font-size:12px; text-align:center; padding:8px; }
+  details summary { cursor:pointer; font-weight:600; }
+  ol.how { margin:6px 0 0; padding-left:20px; display:grid; gap:4px; font-size:14px; }
+  .sticky { position:sticky; bottom:0; padding-block:10px; background:linear-gradient(transparent, var(--bg) 30%); display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Set up your WhatsApp agent</h1>
+    <a href="/dashboard">Open dashboard →</a>
+  </header>
+
+  <section class="card" id="login" hidden>
+    <h2 id="loginTitle">Enter the setup code</h2>
+    <p class="muted" id="loginHelp">It's shown in the black server window where the agent is running.</p>
+    <div class="row"><input id="code" type="password" autocomplete="current-password" aria-label="Code or password"><button class="primary" id="loginBtn">Continue</button></div>
+    <p class="msg err" id="loginErr" hidden></p>
+  </section>
+
+  <div id="app" hidden>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <section class="card">
+        <h2>Your progress</h2>
+        <ul class="steps" id="steps"></ul>
+      </section>
+
+      <section class="card" id="webhookCard">
+        <h2>Connect Meta to this agent</h2>
+        <p class="muted">In developers.facebook.com → your app → WhatsApp → Configuration → Webhook, paste these two values, click Verify and save, then subscribe to <b>messages</b>.</p>
+        <div id="noUrl" class="msg err" hidden></div>
+        <div id="urls">
+          <p class="muted">Callback URL</p>
+          <div class="copy"><code id="webhookUrl"></code><button data-copy="webhookUrl">Copy</button></div>
+          <p class="muted" style="margin-top:8px">Verify token</p>
+          <div class="copy"><code id="verifyToken"></code><button data-copy="verifyToken">Copy</button></div>
+        </div>
+        <div class="row">
+          <button id="checkBtn">Check WhatsApp connection</button>
+        </div>
+        <div class="row">
+          <input id="testTo" inputmode="tel" placeholder="Your WhatsApp number, e.g. 919876543210" aria-label="Test number">
+          <button id="testBtn">Send test message</button>
+        </div>
+        <p class="msg" id="connMsg" hidden></p>
+      </section>
+
+      <section class="card">
+        <h2>UPI payment QR code</h2>
+        <p class="muted">Sent to leads with the ₹1,000 consultation fee details. UPI ID: <b id="upi"></b></p>
+        <div class="qr">
+          <img id="qrImg" alt="Current UPI QR code" hidden>
+          <div class="noqr" id="noQr">No QR uploaded yet</div>
+          <label style="flex:1;min-width:200px">Upload QR image (JPG or PNG)<input type="file" id="qrFile" accept="image/jpeg,image/png"></label>
+        </div>
+        <p class="msg" id="qrMsg" hidden></p>
+      </section>
+
+      <form id="form" class="card" autocomplete="off">
+        <h2>Settings</h2>
+        <p class="muted">Saved on this computer or server and applied straight away. Leave a password field empty to keep the saved one.</p>
+        <div id="fields" style="display:flex;flex-direction:column;gap:18px"></div>
+        <div class="sticky"><button class="primary" type="submit" id="saveBtn">Save settings</button><span class="msg" id="saveMsg" hidden></span></div>
+      </form>
+
+      <section class="card">
+        <h2>Use it on your phone</h2>
+        <p class="muted">Open the dashboard on your phone using the public link, then install it like an app.</p>
+        <ol class="how">
+          <li><b>Android (Chrome):</b> menu ⋮ → <i>Install app</i> or <i>Add to Home screen</i>.</li>
+          <li><b>iPhone (Safari):</b> Share → <i>Add to Home Screen</i>.</li>
+        </ol>
+        <p class="muted" id="phoneLink"></p>
+      </section>
+    </div>
+  </div>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let token = '';
+let setupCode = location.hash.replace('#', '');
+try { token = localStorage.getItem('wa-agent-token') || ''; } catch (e) {}
+let status = null;
+
+async function api(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (setupCode) headers['X-Setup-Code'] = setupCode;
+  const res = await fetch(path, { ...opts, headers });
+  const body = await res.json().catch(() => ({}));
+  if (res.status === 401) { showLogin(body.error); throw new Error('unauthorised'); }
+  if (!res.ok) throw new Error(body.error || res.statusText);
+  return body;
+}
+
+function showLogin(err) {
+  $('app').hidden = true; $('login').hidden = false;
+  const first = !err || /setup code/i.test(err);
+  $('loginTitle').textContent = first && !token ? 'Enter the setup code' : 'Enter the dashboard password';
+  $('loginHelp').textContent = first && !token ? "It's shown in the black server window where the agent is running." : 'The password you chose for the dashboard.';
+  $('loginErr').hidden = !(err && (token || setupCode)); $('loginErr').textContent = err || '';
+}
+$('loginBtn').onclick = () => {
+  const v = $('code').value.trim();
+  if (/^\d{6}$/.test(v) && (!status || status.firstRun)) setupCode = v; else { token = v; try { localStorage.setItem('wa-agent-token', v); } catch (e) {} }
+  load();
+};
+$('code').onkeydown = (e) => { if (e.key === 'Enter') $('loginBtn').click(); };
+
+function note(id, text, ok) { const el = $(id); el.hidden = !text; el.textContent = text || ''; el.className = `msg ${ok ? 'ok' : 'err'}`; }
+
+function render(s) {
+  status = s;
+  pollTunnel(s);
+  const r = s.ready;
+  const steps = [
+    [!s.firstRun, 'Dashboard password saved'],
+    [r.publicUrl, s.publicUrl ? `Public link ready: ${s.publicUrl}` : 'Public link (a tunnel on your computer, or your server address)'],
+    [r.whatsapp, 'WhatsApp details added (token, phone number ID, app secret, verify token)'],
+    [r.qr, 'UPI QR code uploaded'],
+    [r.alerts, 'Team alert numbers added', true],
+    [r.template, 'Follow-up template name added', true],
+    [r.claude, 'Claude key added for AI replies', true],
+  ];
+  $('steps').innerHTML = steps.map(([done, text, opt], i) => `<li class="${done ? 'done' : ''}"><span class="dot">${done ? '✓' : i + 1}</span><span>${esc(text)}${opt && !done ? ' <span class="opt">(optional)</span>' : ''}</span></li>`).join('');
+
+  $('urls').hidden = !s.webhookUrl;
+  $('noUrl').hidden = Boolean(s.webhookUrl);
+  $('noUrl').textContent = s.tunnel.error || (s.tunnel.kind ? `Waiting for the ${s.tunnel.kind} public link… refresh in a few seconds.` : 'No public link yet. Choose a public link below (on your own computer) or enter your server address.');
+  $('webhookUrl').textContent = s.webhookUrl;
+  $('verifyToken').textContent = s.verifyToken || '(set a verify token below)';
+  $('upi').textContent = s.upiId;
+  $('qrImg').hidden = !s.qr; $('noQr').hidden = Boolean(s.qr);
+  if (s.qr) $('qrImg').src = `${s.qr}?t=${Date.now()}`;
+  $('phoneLink').innerHTML = s.publicUrl ? `Phone link: <b>${esc(s.publicUrl)}/dashboard</b>` : 'You need a public link before the dashboard opens on your phone (or use the same Wi-Fi and this computer’s address).';
+
+  if (!$('fields').dataset.ready) {
+    const groups = {};
+    for (const f of s.fields) (groups[f.group] ||= []).push(f);
+    $('fields').innerHTML = Object.entries(groups).map(([g, fs]) => `<fieldset style="border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:10px"><legend class="muted" style="font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:12px;margin-bottom:6px">${esc(g)}</legend><div class="grid">${fs.map(field).join('')}</div></fieldset>`).join('');
+    $('fields').dataset.ready = '1';
+    const vt = document.getElementById('f-WHATSAPP_VERIFY_TOKEN');
+    if (vt && !vt.value) vt.value = `hindivine-${Math.random().toString(36).slice(2, 10)}`;
+  } else {
+    for (const f of s.fields) if (f.secret) { const el = document.getElementById(`f-${f.key}`); if (el) { el.value = ''; el.placeholder = f.masked || 'Not set'; } }
+  }
+}
+
+// While a tunnel is starting, check again until its link (or an error) appears.
+let polling = null;
+function pollTunnel(s) {
+  clearTimeout(polling);
+  if (s.tunnel.kind && !s.publicUrl && !s.tunnel.error) polling = setTimeout(load, 3000);
+}
+
+function field(f) {
+  const id = `f-${f.key}`;
+  const input = f.options
+    ? `<select id="${id}" name="${f.key}">${f.options.map((o) => `<option value="${o}" ${o === f.value ? 'selected' : ''}>${o ? o[0].toUpperCase() + o.slice(1) : 'None (hosted server)'}</option>`).join('')}</select>`
+    : `<input id="${id}" name="${f.key}" type="${f.secret ? 'password' : 'text'}" value="${esc(f.value)}" placeholder="${esc(f.secret ? f.masked || 'Not set' : '')}" autocomplete="off" spellcheck="false">`;
+  return `<label for="${id}">${esc(f.label)}${input}<small>${esc(f.help)}</small></label>`;
+}
+
+$('form').onsubmit = async (e) => {
+  e.preventDefault();
+  const body = Object.fromEntries(new FormData($('form')).entries());
+  $('saveBtn').disabled = true;
+  try {
+    const s = await api('/api/setup', { method: 'POST', body: JSON.stringify(body) });
+    if (body.DASHBOARD_TOKEN) { token = body.DASHBOARD_TOKEN; setupCode = ''; try { localStorage.setItem('wa-agent-token', token); } catch (err) {} history.replaceState(null, '', '/setup'); }
+    render(s);
+    note('saveMsg', 'Saved and applied.', true);
+  } catch (err) { if (err.message !== 'unauthorised') note('saveMsg', err.message, false); }
+  finally { $('saveBtn').disabled = false; }
+};
+
+$('qrFile').onchange = async () => {
+  const file = $('qrFile').files[0];
+  if (!file) return;
+  if (file.size > 4.5e6) return note('qrMsg', 'That image is too large. Use one under 4 MB.', false);
+  const headers = { 'Content-Type': file.type };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (setupCode) headers['X-Setup-Code'] = setupCode;
+  const res = await fetch('/api/setup/qr', { method: 'POST', headers, body: file });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) return note('qrMsg', body.error || 'Upload failed.', false);
+  render(body); note('qrMsg', 'QR code saved. Leads will receive it with the payment details.', true);
+};
+
+$('checkBtn').onclick = async () => {
+  $('checkBtn').disabled = true;
+  try { const r = await api('/api/setup/check'); note('connMsg', r.message, r.ok); } catch (e) { if (e.message !== 'unauthorised') note('connMsg', e.message, false); }
+  finally { $('checkBtn').disabled = false; }
+};
+$('testBtn').onclick = async () => {
+  $('testBtn').disabled = true;
+  try {
+    const r = await api('/api/setup/test', { method: 'POST', body: JSON.stringify({ to: $('testTo').value }) });
+    note('connMsg', r.dryRun ? 'WhatsApp is not connected yet, so the message was only shown in the server window.' : 'Test message sent. Check that phone.', !r.dryRun);
+  } catch (e) { if (e.message !== 'unauthorised') note('connMsg', `${e.message}. The number must have messaged your business number in the last 24 hours.`, false); }
+  finally { $('testBtn').disabled = false; }
+};
+document.querySelectorAll('[data-copy]').forEach((b) => (b.onclick = async () => {
+  const text = $(b.dataset.copy).textContent;
+  try { await navigator.clipboard.writeText(text); b.textContent = 'Copied'; } catch (e) { const r = document.createRange(); r.selectNodeContents($(b.dataset.copy)); getSelection().removeAllRanges(); getSelection().addRange(r); }
+  setTimeout(() => (b.textContent = 'Copy'), 1500);
+}));
+
+async function load() {
+  try { const s = await api('/api/setup'); $('login').hidden = true; $('app').hidden = false; render(s); } catch (e) { if (e.message !== 'unauthorised') showLogin(e.message); }
+}
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+load();
+</script>
+</body>
+</html>

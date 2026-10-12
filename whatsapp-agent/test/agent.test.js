@@ -370,3 +370,62 @@ test('uses only the 89208 31975 number', () => {
   assert.equal(business.phone, '+91 89208 31975');
   assert.doesNotMatch(JSON.stringify(business), /8889995465/);
 });
+
+test('setup page: first-run code, save settings, password, QR upload, secrets stay hidden', async (t) => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const path = require('node:path');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wa-setup-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const env = { SETTINGS_FILE: path.join(dir, 'settings.env'), DATA_FILE: path.join(dir, 'leads.json') };
+  const store = createStore(null);
+  const wa = fakeWhatsApp();
+  const rules = createRuleBrain({ business });
+  let reloads = 0;
+  const deps = { env, business, store, wa, agent: createAgent({ store, wa, brain: rules, business, log: quiet }), state: { setupCode: '123456' }, reload: () => reloads++ };
+  const server = http.createServer(createApp(deps));
+  await new Promise((r) => server.listen(0, r));
+  t.after(() => server.close());
+  const base = `http://127.0.0.1:${server.address().port}`;
+
+  assert.equal((await fetch(`${base}/setup`)).status, 200);
+  assert.equal((await fetch(`${base}/manifest.webmanifest`)).headers.get('content-type'), 'application/manifest+json');
+  assert.equal((await fetch(`${base}/api/setup`)).status, 401);
+  assert.equal((await fetch(`${base}/api/setup`, { headers: { 'X-Setup-Code': '000000' } })).status, 401);
+  const first = await (await fetch(`${base}/api/setup`, { headers: { 'X-Setup-Code': '123456' } })).json();
+  assert.equal(first.firstRun, true);
+
+  let res = await fetch(`${base}/api/setup`, { method: 'POST', headers: { 'X-Setup-Code': '123456' }, body: JSON.stringify({ WHATSAPP_TOKEN: 'EAAsecret1234' }) });
+  assert.equal(res.status, 400, 'a dashboard password is required first');
+  res = await fetch(`${base}/api/setup`, { method: 'POST', headers: { 'X-Setup-Code': '123456' }, body: JSON.stringify({
+    DASHBOARD_TOKEN: 'clinic-pass', WHATSAPP_TOKEN: 'EAAsecret1234', WHATSAPP_PHONE_NUMBER_ID: '555', ALERT_NUMBERS: '+91 98765 43210, 91-9000000000',
+    PUBLIC_URL: 'https://agent.example.com/', EVIL: 'x', WHATSAPP_VERIFY_TOKEN: 'abc\nINJECT=1',
+  }) });
+  const saved = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(reloads, 1);
+  assert.equal(saved.webhookUrl, 'https://agent.example.com/webhook');
+  assert.equal(env.ALERT_NUMBERS, '919876543210,919000000000');
+  const file = fs.readFileSync(env.SETTINGS_FILE, 'utf8');
+  assert.match(file, /^WHATSAPP_TOKEN=EAAsecret1234$/m);
+  assert.doesNotMatch(file, /EVIL|^INJECT/m);
+  assert.ok(!JSON.stringify(saved).includes('EAAsecret1234'), 'secrets are never sent back');
+  assert.equal(saved.fields.find((f) => f.key === 'WHATSAPP_TOKEN').masked, '••••1234');
+
+  assert.equal((await fetch(`${base}/api/setup`, { headers: { 'X-Setup-Code': '123456' } })).status, 401, 'setup code stops working once a password exists');
+  const auth = { Authorization: 'Bearer clinic-pass' };
+  res = await fetch(`${base}/api/setup`, { method: 'POST', headers: auth, body: JSON.stringify({ WHATSAPP_TOKEN: '' }) });
+  assert.equal(res.status, 200);
+  assert.equal(env.WHATSAPP_TOKEN, 'EAAsecret1234', 'blank secret keeps the saved one');
+
+  res = await fetch(`${base}/api/setup/qr`, { method: 'POST', headers: auth, body: 'not an image' });
+  assert.equal(res.status, 400);
+  const png = Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex');
+  res = await fetch(`${base}/api/setup/qr`, { method: 'POST', headers: { ...auth, 'Content-Type': 'image/png' }, body: png });
+  assert.equal((await res.json()).qr, '/media/upi-qr.png');
+  assert.equal((await fetch(`${base}/media/upi-qr.png`)).status, 200);
+
+  res = await fetch(`${base}/api/setup/test`, { method: 'POST', headers: auth, body: JSON.stringify({ to: '91 98765 43210' }) });
+  assert.equal(res.status, 200);
+  assert.ok(wa.sent.some((m) => m.to === '919876543210' && /connected/.test(m.text)));
+});

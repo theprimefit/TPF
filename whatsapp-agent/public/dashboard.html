@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>WhatsApp Lead Agent</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#1b2a6b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="/icon-192.png">
 <style>
   :root { --bg:#f4f6f5; --card:#fff; --text:#16201c; --muted:#66746e; --line:#e2e8e5; --brand:#128c4a; --brand-soft:#e3f4ea; --hot:#d93f2b; --warm:#d98a00; --cold:#5a7fa6; --in:#fff; --out:#dcf8c6; }
   @media (prefers-color-scheme: dark) { :root { --bg:#0f1513; --card:#18211e; --text:#e6ece9; --muted:#93a39c; --line:#2a3531; --brand:#2fbf6d; --brand-soft:#173826; --in:#22302b; --out:#1f4a33; } }
@@ -54,13 +58,14 @@
   .banner { background:#fff4d6; color:#5c4300; padding:8px 12px; border-bottom:1px solid var(--line); font-size:13px; }
   .empty { padding:40px; text-align:center; color:var(--muted); }
   #login { max-width:360px; margin:12vh auto; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; display:flex; flex-direction:column; gap:10px; }
+  @media (max-width:600px) { header { flex-wrap:wrap; } header h1 { flex-basis:100%; font-size:15px; } header button { padding:5px 10px; font-size:13px; } }
   @media (max-width:900px) { .layout, .detail { grid-template-columns:1fr; } .chat { border-right:0; } .list { max-height:40vh; } }
 </style>
 </head>
 <body>
 <div id="login" hidden>
   <h2 style="margin:0">WhatsApp Lead Agent</h2>
-  <p style="margin:0;color:var(--muted)">Enter the dashboard token (DASHBOARD_TOKEN in .env).</p>
+  <p style="margin:0;color:var(--muted)">Enter the dashboard password. First time? <a href="/setup">Open setup</a>.</p>
   <input id="token" type="password" placeholder="Dashboard token">
   <button class="primary" id="loginBtn">Open dashboard</button>
   <p id="loginErr" style="color:var(--hot);margin:0"></p>
@@ -69,6 +74,7 @@
 <div id="app" hidden>
   <header>
     <h1 id="title">WhatsApp Lead Agent</h1>
+    <a href="/setup"><button>Setup</button></a>
     <a id="csv" href="#"><button>Export CSV</button></a>
     <button id="logout">Log out</button>
   </header>
@@ -215,6 +221,7 @@ async function start() {
   try { await refresh(); $('login').hidden = true; $('app').hidden = false; } catch (e) { if (e.message !== 'unauthorised') showLogin(e.message); }
 }
 setInterval(() => { if (!$('app').hidden) refresh().catch(() => {}); }, 10000);
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 start();
 </script>
 </body>

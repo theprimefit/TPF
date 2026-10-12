@@ -22,7 +22,29 @@ An all-in-one WhatsApp sales agent for **Hindivine Healthcare's 3-month weight l
 | **Compliance** | `STOP` opts a lead out (`START` opts back in), webhook signatures are verified, repeated webhook deliveries are ignored, and only templates are sent outside the 24-hour window. |
 | **Dashboard** | Stats, pipeline, search and filters, full chat, reply box, notes, stage changes, pause/resume bot and CSV export. Works on phones. |
 
-## Setup
+## Easiest ways to run it
+
+### A. On your own computer (free, quickest to try)
+
+1. Install **Node.js LTS** from [nodejs.org](https://nodejs.org).
+2. Download this folder and double-click **`Start-Windows.bat`** (Windows) or **`Start-Mac.command`** (Mac; the first time, right-click → Open). On Linux run `./start-linux.sh`.
+3. Your browser opens the **setup page**. Enter the 6-digit setup code shown in the black window, choose a dashboard password, then fill in the WhatsApp details and upload the QR code. Everything is saved and applied immediately.
+4. **Public link:** WhatsApp needs an internet address that reaches your computer. On the setup page choose:
+   - **ngrok** (recommended): free account at [ngrok.com](https://ngrok.com), install ngrok, claim your free fixed domain, and enter the domain and authtoken. The link never changes.
+   - **Cloudflare**: install `cloudflared` (`winget install --id Cloudflare.cloudflared` or `brew install cloudflared`). No account needed, but the link changes on every restart, so you must paste the new webhook URL into Meta each time.
+5. Copy the **Callback URL** and **Verify token** from the setup page into Meta (WhatsApp → Configuration → Webhook), then press **Send test message**.
+
+Keep the computer on and awake, with the window open: the agent stops when it does.
+
+### B. In the cloud on Render (always on, about $7/month)
+
+The repo includes a `render.yaml` blueprint. In Render choose **New → Blueprint**, pick this repository and branch, and deploy. It creates the web service with a persistent disk for leads, settings and the QR image. Then open `https://<your-app>.onrender.com/setup`, enter the setup code from Render's **Logs**, and fill in the same details. The public address is detected automatically (also on Railway).
+
+### Phone app for the team
+
+Open `https://<your public link>/dashboard` on a phone and choose **Install app** (Android Chrome) or **Share → Add to Home Screen** (iPhone). It opens full screen like an app, with the leads, chats, replies and payment checks.
+
+## Manual setup
 
 Needs Node 18+.
 
