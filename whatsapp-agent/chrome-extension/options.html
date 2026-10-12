@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Hindivine Leads · Connect</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  main { max-width: 520px; margin: 0 auto; padding: 28px 16px; display: flex; flex-direction: column; gap: 14px; }
+  form { display: flex; flex-direction: column; gap: 12px; }
+  ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <div style="display:flex;gap:10px;align-items:center"><img src="icons/icon-48.png" width="40" height="40" alt=""><div><h1>Hindivine Leads</h1><p class="muted">Connect the extension to your WhatsApp lead agent.</p></div></div>
+  <form class="card" id="form">
+    <label for="server">Agent address
+      <input id="server" placeholder="https://hindivine.ngrok-free.app or http://localhost:3000" autocomplete="off" spellcheck="false" required>
+    </label>
+    <label for="token">Dashboard password
+      <input id="token" type="password" autocomplete="current-password" required>
+    </label>
+    <button class="primary" type="submit" id="save">Save and connect</button>
+    <p class="msg" id="msg" hidden></p>
+  </form>
+  <div class="card" style="display:flex;flex-direction:column;gap:6px">
+    <p style="font-weight:600">What you get</p>
+    <ul>
+      <li>Desktop alerts for new leads, payments to verify, chats that need a person and hot leads.</li>
+      <li>A red count on the toolbar icon, and a popup with one-click <b>Mark paid</b> and <b>Resume bot</b>.</li>
+      <li>On <b>web.whatsapp.com</b>, a lead card next to the open chat with quick replies you can check before sending.</li>
+    </ul>
+    <p class="muted">If the agent runs on this computer, use <b>http://localhost:3000</b>. Chrome will ask once to allow access to that address.</p>
+  </div>
+</main>
+<script src="lib.js"></script>
+<script src="options.js"></script>
+</body>
+</html>

@@ -228,9 +228,15 @@ async function refresh() {
 
 async function start() {
   if (!state.token) return showLogin();
-  try { await refresh(); $('login').hidden = true; $('app').hidden = false; } catch (e) { if (e.message !== 'unauthorised') showLogin(e.message); }
+  try {
+    await refresh(); $('login').hidden = true; $('app').hidden = false;
+    // Links like /dashboard#lead=919812345678 (from the Chrome extension) open that lead.
+    const m = location.hash.match(/^#lead=(\d+)$/);
+    if (m) openLead(m[1]).catch(() => {});
+  } catch (e) { if (e.message !== 'unauthorised') showLogin(e.message); }
 }
 setInterval(() => { if (!$('app').hidden) refresh().catch(() => {}); }, 10000);
+window.addEventListener('hashchange', () => { const m = location.hash.match(/^#lead=(\d+)$/); if (m && !$('app').hidden) openLead(m[1]).catch(() => {}); });
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 start();
 </script>

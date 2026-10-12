@@ -59,6 +59,8 @@ The repo includes a `render.yaml` blueprint. In Render choose **New → Blueprin
 
 **Android app:** install [`dist/HindivineLeads.apk`](dist/HindivineLeads.apk) (Android 7.0+; allow *Install unknown apps* when asked). On first open, enter the agent's address (the public link from the setup page, your Render address, or `http://<computer-ip>:3000` on the office Wi-Fi), then log in with the dashboard password. **Server** in the dashboard header changes the address later. Rebuild with `VERSION_CODE=2 VERSION_NAME=1.1 ./android/build.sh` (needs Java 11+; keep `android/leads-release.p12`, updates must be signed with the same key).
 
+**Chrome extension (computers):** unzip [`dist/HindivineLeads-chrome.zip`](dist/HindivineLeads-chrome.zip), open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and choose the unzipped folder. In the options page that opens, enter the agent address and dashboard password, and allow access when Chrome asks. You get desktop alerts (new leads, payments to verify, chats that need a person, hot leads), a red count on the toolbar icon, a popup with **Mark paid** / **Resume bot**, and on web.whatsapp.com a lead card with quick replies that are typed into the message box for you to check and send. Source: `chrome-extension/`.
+
 **iPhone, or without installing:** open `https://<your public link>/dashboard` and choose **Share → Add to Home Screen** (iPhone) or **Install app** (Android Chrome).
 
 ## Manual setup

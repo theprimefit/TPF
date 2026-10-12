@@ -190,6 +190,12 @@ function createApp(deps) {
       if (parts[0] === 'api') {
         if (!authorised(req)) return send(res, 401, { error: 'unauthorised' });
 
+        // Business details for the Chrome extension's quick replies.
+        if (url.pathname === '/api/business') {
+          const { businessName, agentName, phone, website, consultationFee, services, included, payment, clinic, doctor } = business;
+          return send(res, 200, { businessName, agentName, phone, website, consultationFee, services, included, upiId: payment?.upiId || '', clinic, doctor: doctor?.name || '' });
+        }
+
         if (url.pathname === '/api/stats') return send(res, 200, { ...store.stats(), business: business.businessName, whatsapp: { mode: modeOf(env), state: deps.web ? deps.web.status().state : env.WHATSAPP_TOKEN ? 'connected' : 'off' } });
 
         if (url.pathname === '/api/leads' && req.method === 'GET') {
