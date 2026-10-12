@@ -84,6 +84,10 @@ Open `/dashboard` and enter `DASHBOARD_TOKEN`. The same token works as a Bearer 
 
 Leads are stored in `data/leads.json` (git-ignored), written atomically. That's fine for one server and thousands of leads. To scale beyond that, replace `src/store.js` with a database; nothing else needs to change. Back up the `data/` folder.
 
+## Demo
+
+`node demo/build.js` bundles the real agent code into `demo/hindivine-lead-agent.html`, a single page where you chat as a lead and watch the CRM update. It uses the rule-based replies and needs no keys.
+
 ## Test
 
 ```sh
