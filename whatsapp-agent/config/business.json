@@ -1,7 +1,7 @@
 {
   "businessName": "Hindivine Healthcare",
   "agentName": "Riya",
-  "phone": "+91 89208 31975 / +91 8889995465",
+  "phone": "+91 89208 31975",
   "website": "https://www.drrajatgoel.com",
   "bookingLink": "https://www.drrajatgoel.com",
   "paymentLink": "",
@@ -28,17 +28,29 @@
   "services": [
     {
       "name": "3-Month Ozempic (semaglutide) Program",
-      "price": "₹19,999 (MRP ₹34,999, save ₹15,000)",
+      "short": "Ozempic",
+      "medicine": "semaglutide",
+      "price": "₹19,999",
+      "mrp": "₹34,999",
+      "save": "₹15,000",
       "details": "Once-weekly Ozempic (semaglutide) injection for 3 months, plus everything in the program."
     },
     {
       "name": "3-Month Wegovy (semaglutide) Program",
-      "price": "₹19,999 (MRP ₹34,999, save ₹15,000)",
+      "short": "Wegovy",
+      "medicine": "semaglutide",
+      "price": "₹19,999",
+      "mrp": "₹34,999",
+      "save": "₹15,000",
       "details": "Once-weekly Wegovy FlexTouch (semaglutide) injection for 3 months, plus everything in the program."
     },
     {
       "name": "3-Month Mounjaro (tirzepatide) Program",
-      "price": "₹29,999 (MRP ₹49,999, save ₹20,000)",
+      "short": "Mounjaro",
+      "medicine": "tirzepatide",
+      "price": "₹29,999",
+      "mrp": "₹49,999",
+      "save": "₹20,000",
       "details": "Once-weekly Mounjaro KwikPen (tirzepatide) injection for 3 months, plus everything in the program."
     }
   ],
@@ -117,7 +129,7 @@
   "email": "info@hindivinehealthcare.com",
   "doctor": {
     "name": "Dr. Rajat Goel",
-    "credentials": "Gold medalist; bariatric, robotic and metabolic surgeon (MBBS, MS, DNB, FAIS, FACS, FMAS, FIAGES, FALS and more)",
+    "credentials": "a gold medalist bariatric, robotic and metabolic surgeon (MBBS, MS, DNB, FAIS, FACS, FMAS, FIAGES, FALS and more)",
     "expertise": [
       "Medical weight management",
       "Obesity and metabolic disorders",

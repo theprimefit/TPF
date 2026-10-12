@@ -145,6 +145,7 @@ function createAgent({ store, wa, brain, fallbackBrain, business, alertNumbers =
     if (decision?.action === 'handoff') await alertTeam(store.getLead(msg.from), `Needs a human (${store.getLead(msg.from).handoffReason})`);
     else if (decision?.action === 'book_call') await alertTeam(lead, 'Consultation link sent');
     else if (decision?.action === 'send_payment') await alertTeam(lead, 'Payment details sent');
+    else if (decision?.action === 'ask_team') await alertTeam(lead, `Question for the team: "${msg.text.slice(0, 200)}"`);
     else if (becameHot) await alertTeam(lead, 'Hot lead');
     return store.save();
   }

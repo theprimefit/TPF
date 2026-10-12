@@ -317,3 +317,56 @@ test('HTTP: webhook verification, signature check and protected API', async (t) 
   const stats = await (await fetch(`${base}/api/stats`, { headers: auth })).json();
   assert.equal(stats.byStage.won, 1);
 });
+
+test('answers common questions instead of repeating the qualifying question', async () => {
+  const cases = [
+    ['is it safe?', /doctor-supervised/],
+    ['how long is the program', /3 months/],
+    ['is online consultation available?', /online consultation/],
+    ['hmm too costly', /a day/],
+    ['difference between ozempic and wegovy', /semaglutide/],
+    ['who is the doctor', /Dr\. Rajat Goel/],
+    ['does it hurt', /pen needle/],
+    ['delivery kab hogi', /delivered/],
+    ['how much weight will I lose', /never promise/],
+    ['Mounjaro price', /₹29,999/],
+  ];
+  for (const [q, expected] of cases) {
+    const { wa, say } = setup();
+    await say('hi');
+    await say(q);
+    assert.match(toLead(wa).at(-1).text, expected, q);
+  }
+});
+
+test('short replies follow the conversation', async () => {
+  const { store, wa, say } = setup();
+  await say('hi');
+  await say('90 kg 5 ft 2');
+  await say('34');
+  assert.equal(store.getLead('919800000001').profile.age, '34');
+  assert.match(toLead(wa).at(-1).text, /condition\?$/);
+  await say('no');
+  assert.equal(store.getLead('919800000001').profile.condition, 'None reported');
+  assert.match(toLead(wa).at(-1).text, /BMI works out to about 36\.3/);
+  await say('haan');
+  assert.equal(store.getLead('919800000001').paymentStatus, 'requested', '"haan" after the booking offer books');
+  const count = toLead(wa).filter((m) => m.type === 'image').length;
+  await say('ok');
+  assert.match(toLead(wa).at(-1).text, /screenshot/);
+  assert.equal(toLead(wa).filter((m) => m.type === 'image').length, count, 'QR is not resent');
+});
+
+test('unknown questions are passed to the team without pausing the bot', async () => {
+  const { store, wa, say } = setup();
+  await say('hi');
+  await say('can my husband join the group meeting too?');
+  assert.match(toLead(wa).at(-1).text, /team/);
+  assert.ok(!store.getLead('919800000001').botPaused);
+  assert.ok(wa.sent.some((m) => m.to === '919999999999' && /Question for the team/.test(m.text)));
+});
+
+test('uses only the 89208 31975 number', () => {
+  assert.equal(business.phone, '+91 89208 31975');
+  assert.doesNotMatch(JSON.stringify(business), /8889995465/);
+});

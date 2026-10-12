@@ -133,7 +133,7 @@ code { font: 500 13px var(--mono); background: var(--accent-soft); padding: 1px 
   <div class="scenarios">
     <span class="lbl">Play a scenario</span>
     <button class="chip" data-scn="buyer">Ad lead books &amp; pays</button>
-    <button class="chip" data-scn="price">Price shopper</button>
+    <button class="chip" data-scn="price">Price shopper with questions</button>
     <button class="chip" data-scn="safety">Breastfeeding lead</button>
     <button class="chip" data-scn="human">Asks for a person</button>
     <button class="chip ghost" id="quiet">Lead goes quiet 2 h</button>
@@ -182,7 +182,6 @@ code { font: 500 13px var(--mono); background: var(--accent-soft); padding: 1px 
 
   <h2 class="section-title">Before going live</h2>
   <div class="panel check" id="checklist">
-    <label><input type="checkbox" id="c1"> <span>Choose the phone number leads should see<span class="why">The program posters show +91 8889995465 and the consultation poster shows +91 89208 31975. The agent currently gives both.</span></span></label>
     <label><input type="checkbox" id="c2"> <span>Confirm the UPI ID letter by letter: <code>paytm.s1k1ukl@pty</code><span class="why">It was read from a photo. One wrong character sends payments elsewhere.</span></span></label>
     <label><input type="checkbox" id="c3"> <span>Add the real Paytm QR image<span class="why">Save it as <code>whatsapp-agent/public/media/upi-qr.jpg</code> and set <code>PUBLIC_URL</code>. The demo shows a placeholder.</span></span></label>
     <label><input type="checkbox" id="c4"> <span>Connect the WhatsApp Cloud API and point the webhook at <code>/webhook</code><span class="why">Token, phone number ID and app secret go in <code>.env</code>.</span></span></label>
@@ -297,7 +296,7 @@ code { font: 500 13px var(--mono); background: var(--accent-soft); padding: 1px 
 
   const SCENARIOS = {
     buyer: { ad: 'Mounjaro weight loss program', lines: ['Hi, saw your ad', 'price?', "I'm 92 kg, 5 ft 4", '34 years, I have thyroid', 'consultation fees kitna hai?', 'I want to book', 'Online consultation', '@image'] },
-    price: { lines: ['Ozempic ka price kya hai?', 'What is included?', 'hmm, too costly'] },
+    price: { lines: ['Ozempic ka price kya hai?', 'is it safe?', 'hmm, too costly', '88 kg, 160 cm', '41', 'no', 'haan'] },
     safety: { lines: ['Hello', 'I am breastfeeding, can I take Wegovy?'] },
     human: { lines: ['hi', 'I want to talk to a person'] },
   };
@@ -326,11 +325,9 @@ code { font: 500 13px var(--mono); background: var(--accent-soft); padding: 1px 
   $('compose').onsubmit = (e) => { e.preventDefault(); const t = $('text').value.trim(); $('text').value = ''; say(t); };
   $('attach').onclick = () => say('payment', 'image');
 
-  $('programs').innerHTML = business.services.map((s) => {
-    const m = s.price.match(/(₹[\d,]+) \(MRP (₹[\d,]+), save (₹[\d,]+)\)/) || [];
-    const drug = s.name.replace('3-Month ', '').replace(' Program', '');
-    return `<div class="prog"><span class="drug">${esc(drug)}</span><span class="price">${esc(m[1] || s.price)}</span><span><s>${esc(m[2] || '')}</s> · save ${esc(m[3] || '')}</span><small>3 months · once-weekly injection · plus everything below</small></div>`;
-  }).join('') + `<div class="prog"><span class="drug">Doctor consultation</span><span class="price">${esc(business.consultationFee)}</span><span>100% adjusted against the program</span><small>Online or clinic visit, with ${esc(business.doctor.name)}. Paid by UPI before booking.</small></div>`;
+  $('programs').innerHTML = business.services.map((s) =>
+    `<div class="prog"><span class="drug">${esc(s.short)} <small>(${esc(s.medicine)})</small></span><span class="price">${esc(s.price)}</span><span><s>${esc(s.mrp)}</s> · save ${esc(s.save)}</span><small>3 months · once-weekly injection · plus everything below</small></div>`
+  ).join('') + `<div class="prog"><span class="drug">Doctor consultation</span><span class="price">${esc(business.consultationFee)}</span><span>100% adjusted against the program</span><small>Online or clinic visit, with ${esc(business.doctor.name)}. Paid by UPI before booking.</small></div>`;
   $('included').innerHTML = business.included.map((i) => `<li>${esc(i)}</li>`).join('');
 
   document.querySelectorAll('#checklist input').forEach((c) => {
