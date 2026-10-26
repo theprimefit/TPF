@@ -51,6 +51,7 @@ Hindivine Diet builds personalised **1–7 day Indian and worldwide diet charts*
 | **Android** | Install [`dist/HindivineDiet.apk`](dist/HindivineDiet.apk) (Android 7.0+). |
 | **iPhone / iPad** | **Now:** host this folder on HTTPS (e.g. hindivine.com/diet) and open it in Safari, then *Share → Add to Home Screen*. It installs as an offline app (`manifest.webmanifest`, `sw.js`). **App Store:** the Xcode project is in `ios-app/`, see below. |
 | **Web** | Open `index.html`, or run `npm start`. |
+| **Admin dashboard app** | Install [`dist/HindivineAdmin.apk`](dist/HindivineAdmin.apk) for [admin.hindivine.tech](https://admin.hindivine.tech/dashboard). See [`admin-app/`](admin-app/README.md). |
 
 ### Building the iOS app (needs a Mac)
 

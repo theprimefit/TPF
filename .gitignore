@@ -6,3 +6,6 @@ android/*.p12
 android/*.jks
 ios-app/node_modules/
 ios-app/www/
+admin-app/android/build/
+admin-app/android/*.p12
+admin-app/ios/node_modules/

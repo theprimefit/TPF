@@ -1,0 +1,10 @@
+{
+  "appId": "com.hindivine.admin",
+  "appName": "Hindivine Admin",
+  "webDir": "www",
+  "server": {
+    "url": "https://admin.hindivine.tech/dashboard",
+    "allowNavigation": ["hindivine.tech", "*.hindivine.tech"]
+  },
+  "ios": { "contentInset": "always", "backgroundColor": "#0A2F55" }
+}
