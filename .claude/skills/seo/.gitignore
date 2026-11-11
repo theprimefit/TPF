@@ -1,0 +1,7 @@
+# claude-seo runtime state (created by `scripts/claude-seo setup`)
+.venv/
+.venv.*/
+ms-playwright/
+runtime-state.json
+.runtime-state.next
+.setup.lock
